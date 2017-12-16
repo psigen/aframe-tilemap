@@ -19,12 +19,10 @@
         <img id="tilemap-image" src="tilemap.png">
       </a-assets>
 
-      <a-plane position="0 0 -4" rotation="-90 0 0" width="10" height="10" color="#7BC8A4" shadow></a-plane>
-
-      <a-entity tilemap="src: #tilemap-image">
-        <a-entity tile="1" geometry="primitive: box; buffer: false" position="-1 0.5 -2"></a-entity>
-        <a-entity tile="2" geometry="primitive: sphere; buffer: false" position="0 0.5 -2"></a-entity>
-        <a-entity tile="3" geometry="primitive: cylinder; buffer: false" position="1 0.5 -2"></a-entity>
+      <a-entity tilemap="src: #tilemap-image" position="0 0 -20">
+        <a-entity tile="1" geometry="primitive: box; buffer: false" visible="false"></a-entity>
+        <a-entity tile="2" geometry="primitive: sphere; buffer: false" visible="false"></a-entity>
+        <a-entity tile="3" geometry="primitive: cylinder; buffer: false" visible="false"></a-entity>
       </a-entity>
 
       <a-sky color="#ECECEC"></a-sky>
