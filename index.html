@@ -3,7 +3,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Hello, World! • A-Frame</title>
+    <title>Tilemap Test • A-Frame</title>
     <meta name="description" content="A-Frame - Tile Render Test">
     <script src="https://code.jquery.com/jquery-3.2.1.min.js"
             integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
@@ -16,11 +16,12 @@
       <a-assets>
         <a-asset-item id="brainstem" src="https://cdn.aframe.io/test-models/models/glTF-2.0/brainstem/BrainStem.gltf"></a-asset-item>
         <a-asset-item id="cityModel" src="https://cdn.aframe.io/test-models/models/glTF-2.0/virtualcity/VC.gltf"></a-asset-item>
+        <img id="tilemap-image" src="tilemap.png">
       </a-assets>
 
       <a-plane position="0 0 -4" rotation="-90 0 0" width="10" height="10" color="#7BC8A4" shadow></a-plane>
 
-      <a-entity tilemap="[1, 1, 2, 2]">
+      <a-entity tilemap="src: #tilemap-image">
         <a-entity tile="1" geometry="primitive: box; buffer: false" position="-1 0.5 -2"></a-entity>
         <a-entity tile="2" geometry="primitive: sphere; buffer: false" position="0 0.5 -2"></a-entity>
         <a-entity tile="3" geometry="primitive: cylinder; buffer: false" position="1 0.5 -2"></a-entity>
@@ -28,6 +29,5 @@
 
       <a-sky color="#ECECEC"></a-sky>
     </a-scene>
-    <script src="index.js"></script>
   </body>
 </html>
