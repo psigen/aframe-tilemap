@@ -103,7 +103,8 @@ function refreshUniformsCommon(uniforms, material) {
       );
     }
 
-    uniforms.uvTransform.value.copy(uvScaleMap.matrix);
+    if (uniforms.uvTransform)
+      uniforms.uvTransform.value.copy(uvScaleMap.matrix);
   }
 }
 
@@ -144,7 +145,8 @@ function refreshUniformsPoints(uniforms, material) {
       );
     }
 
-    uniforms.uvTransform.value.copy(material.map.matrix);
+    if (uniforms.uvTransform)
+      uniforms.uvTransform.value.copy(material.map.matrix);
   }
 }
 
@@ -281,9 +283,9 @@ function refreshUniformsNormal(uniforms, material) {
   }
 }
 
-function updateUniforms(uniforms, material) {
-  if (fog && material.fog) {
-    refreshUniformsFog(m_uniforms, fog);
+function updateUniforms(m_uniforms, material) {
+  if (material.fog) {
+    refreshUniformsFog(m_uniforms, material.fog);
   }
 
   if (material.isMeshBasicMaterial) {
@@ -404,13 +406,7 @@ AFRAME.registerComponent('instanced-tilemap', {
         //const shader = THREE.ShaderLib.basic;
         const shader = SHADERLIB_MATERIALS[meshMaterial.type];
         const uniforms = THREE.UniformsUtils.clone(shader.uniforms);
-
-        for (const uniform in shader.uniforms) {
-          if (meshMaterial[uniform] !== undefined) {
-            uniforms[uniform].value = meshMaterial[uniform];
-          }
-        }
-        uniforms['diffuse'].value = meshMaterial.color;
+        updateUniforms(uniforms, meshMaterial);
 
         console.log(uuid);
         if (meshMaterial.type == 'MeshStandardMaterial') {
@@ -429,6 +425,22 @@ AFRAME.registerComponent('instanced-tilemap', {
           vertexShader: document.getElementById('vertexShader').textContent,
           fragmentShader: shader.fragmentShader,
           lights: meshMaterial.lights,
+          defines: {
+            USE_MAP: !!meshMaterial.map,
+            USE_ENVMAP: !!meshMaterial.envMap,
+            USE_AOMAP: !!meshMaterial.aoMap,
+            USE_EMISSIVEMAP: !!meshMaterial.emissiveMap,
+            USE_BUMPMAP: !!meshMaterial.bumpMap,
+            USE_NORMALMAP: !!meshMaterial.normalMap,
+            USE_SPECULARMAP: !!meshMaterial.specularMap,
+            USE_ROUGHNESSMAP: !!meshMaterial.roughnessMap,
+            USE_METALNESSMAP: !!meshMaterial.metalnessMap,
+            USE_ALPHAMAP: !!meshMaterial.alphaMap,
+            USE_COLOR: !!meshMaterial.vertexColors,
+            FLAT_SHADED: !!meshMaterial.flatShading,
+            DOUBLE_SIDED: !!meshMaterial.doubleSided,
+            FLIP_SIDED: !meshMaterial.flipSided,
+          },
         });
 
         const instanceGeometry = new THREE.InstancedBufferGeometry();
