@@ -38,7 +38,7 @@ AFRAME.registerComponent('instanced-tilemap', {
     const tiles = this.tiles;
     const instanceMaterial = new THREE.RawShaderMaterial({
       uniforms: {
-        map: { value: new THREE.TextureLoader().load('tilemap-64px.png') },
+        map: { value: new THREE.TextureLoader().load('tilemap-064px.png') },
       },
       vertexShader: document.getElementById('vertexShader').textContent,
       fragmentShader: document.getElementById('fragmentShader').textContent,
@@ -100,6 +100,7 @@ AFRAME.registerComponent('instanced-tilemap', {
     const t0 = performance.now();
 
     const M_TAU_SCALED = 2.0 * Math.PI / 256.0;
+    const Z_AXIS = new THREE.Vector3(0, 0, 1);
     const tiles = this.tiles;
 
     const img = this.data.src;
@@ -128,23 +129,17 @@ AFRAME.registerComponent('instanced-tilemap', {
 
         // Retrieve the appropriate tile geometry and merge it into place.
         if (tileId in tiles) {
-          // Retrieve instance and tile position.
+          // Determine instance and tile position.
           const instances = tiles[tileId].instances;
           const x = tileWidth * col + tileOffsetX;
           const y = tileHeight * row + tileOffsetY;
-          const theta = M_TAU_SCALED * b;
+          const orientation = new THREE.Quaternion().setFromAxisAngle(
+            Z_AXIS,
+            M_TAU_SCALED * b,
+          );
 
-          // Compute relative offset to origin of tilemap.
-          const matrix = new THREE.Matrix4().makeTranslation(x, y, 0.0);
-          matrix.multiply(new THREE.Matrix4().makeRotationZ(theta));
-
-          // Decompose matrix into a translation and rotation.
-          const offset = new THREE.Vector3();
-          const orientation = new THREE.Quaternion();
-          const scale = new THREE.Vector3();
-          matrix.decompose(offset, orientation, scale);
-
-          instances.offsets.push(offset.x, offset.y, offset.z);
+          // Add this instance's position to the instanced attributes.
+          instances.offsets.push(x, y, 0);
           instances.orientations.push(
             orientation.x,
             orientation.y,
