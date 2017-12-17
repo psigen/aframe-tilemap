@@ -22,7 +22,45 @@ AFRAME.registerComponent('tilemap', {
 
     // TODO: add event handler for new children.
     this.constructTiles(tiles);
+    this.constructMap();
     this.bake();
+  },
+
+  // Take all map Geometry constructed so far and put them in BufferGeometry
+  bake() {
+    const t0 = performance.now();
+
+    const mapGeometries = this.mapGeometries;
+    const tileMeshes = this.tileMeshes;
+
+    const mapMeshes = {};
+    this.mapMeshes = mapMeshes;
+
+    for (const tileId in tileMeshes) {
+      const tileMeshesEntry = tileMeshes[tileId];
+      const mapGeometriesEntry = mapGeometries[tileId];
+      const mapMeshesEntry = {};
+
+      for (const uuid in mapGeometriesEntry) {
+        const mapGeometry = mapGeometriesEntry[uuid];
+        const tileMesh = tileMeshesEntry[uuid];
+
+        const mapMesh = new THREE.Mesh(
+          new THREE.BufferGeometry().fromGeometry(mapGeometry),
+          tileMesh.material,
+        );
+        this.el.object3D.add(mapMesh);
+        mapMeshesEntry[uuid] = mapMesh;
+      }
+
+      mapMeshes[tileId] = mapMeshesEntry;
+    }
+
+    // If the debug flag is set, print timing metrics.
+    if (this.data.debug) {
+      const t1 = performance.now();
+      console.log(`Tile map baking took ${t1 - t0} milliseconds.`);
+    }
   },
 
   // 1. Take all the meshes in the tile
@@ -32,7 +70,7 @@ AFRAME.registerComponent('tilemap', {
   // 3. If the pixel value is in this.tiles.
   // 4. Add that tile at the corresponding position and rotation.
   // We will create a map of tileId => array of meshes
-  bake() {
+  constructMap() {
     const t0 = performance.now();
 
     const M_TAU_SCALED = 2.0 * Math.PI / 256.0;
@@ -69,7 +107,6 @@ AFRAME.registerComponent('tilemap', {
           const x = tileWidth * col + tileOffsetX;
           const y = tileHeight * row + tileOffsetY;
           this.addTile(tileId, x, y, rotation);
-          //console.log((row, col));
         }
       }
     }
@@ -82,35 +119,36 @@ AFRAME.registerComponent('tilemap', {
   },
 
   addTile(tileId, x, y, theta) {
-    const mapMeshesEntry = this.mapMeshes[tileId];
+    const mapGeometriesEntry = this.mapGeometries[tileId];
     const tileMeshesEntry = this.tileMeshes[tileId];
 
     // TODO: what is the performance of this?
     for (const uuid in tileMeshesEntry) {
       const tileMesh = tileMeshesEntry[uuid];
-      const mapMesh = mapMeshesEntry[uuid];
+      const mapGeometry = mapGeometriesEntry[uuid];
 
       const matrix = new THREE.Matrix4().copy(tileMesh.matrix);
       matrix.multiply(new THREE.Matrix4().makeTranslation(x, y, 0.0));
       matrix.multiply(new THREE.Matrix4().makeRotationZ(theta));
 
-      mapMesh.geometry.merge(tileMesh.geometry, matrix);
+      mapGeometry.merge(tileMesh.geometry, matrix);
     }
   },
 
-  constructTiles(tiles) {
+  constructTiles() {
     const t0 = performance.now();
+    const tiles = this.tiles;
 
     const tileMeshes = {};
     this.tileMeshes = tileMeshes;
 
-    const mapMeshes = {};
-    this.mapMeshes = mapMeshes;
+    const mapGeometries = {};
+    this.mapGeometries = mapGeometries;
 
     for (const tileId in tiles) {
       const tile = tiles[tileId];
       const tileMeshesEntry = {};
-      const mapMeshesEntry = {};
+      const mapGeometriesEntry = {};
 
       tile.el.object3D.traverse(tileMesh => {
         if (tileMesh.type !== 'Mesh') return;
@@ -119,17 +157,16 @@ AFRAME.registerComponent('tilemap', {
         tileMesh.updateMatrix();
         tileMeshesEntry[uuid] = tileMesh;
 
-        const mapMesh = new THREE.Mesh(new THREE.Geometry(), tileMesh.material);
-        this.el.object3D.add(mapMesh);
-        mapMeshesEntry[uuid] = mapMesh;
+        const mapGeometry = new THREE.Geometry();
+        mapGeometriesEntry[uuid] = mapGeometry;
       });
 
       this.tileMeshes[tileId] = tileMeshesEntry;
-      this.mapMeshes[tileId] = mapMeshesEntry;
+      this.mapGeometries[tileId] = mapGeometriesEntry;
     }
 
     console.log(tileMeshes);
-    console.log(mapMeshes);
+    console.log(mapGeometries);
 
     // If the debug flag is set, print timing metrics.
     if (this.data.debug) {
