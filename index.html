@@ -15,15 +15,12 @@
     <script id="vertexShader" type="x-shader/x-vertex">
       precision highp float;
 
-      uniform mat4 modelViewMatrix;
-      uniform mat4 projectionMatrix;
-
-      attribute vec3 position;
       attribute vec3 tilemapOffset;
       attribute vec4 tilemapOrientation;
-      attribute vec2 uv;
 
       varying vec2 vUv;
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
 
       void main() {
         vec3 vPosition = position;
@@ -31,15 +28,6 @@
         vPosition = vcV * ( 2.0 * tilemapOrientation.w ) + ( cross( tilemapOrientation.xyz, vcV ) * 2.0 + vPosition );
         vUv = uv;
         gl_Position = projectionMatrix * modelViewMatrix * vec4( tilemapOffset + vPosition, 1.0 );
-      }
-    </script>
-    <script id="fragmentShader" type="x-shader/x-fragment">
-      precision highp float;
-      uniform sampler2D map;
-      varying vec2 vUv;
-
-      void main() {
-        gl_FragColor = texture2D( map, vUv );
       }
     </script>
     <a-scene stats vr-mode-ui="enabled: false">
@@ -54,7 +42,7 @@
         <a-entity tile="id: 2; isLoaded: true" gltf-model="#milkTruck" scale="0.5 0.5 0.5"></a-entity>
         <a-entity tile="id: 3" geometry="primitive: sphere; buffer: false" visible="false"></a-entity>
       </a-entity>
-      <a-sky color="#ECECEC"></a-sky>
+      <a-sky color="#333"></a-sky>
     </a-scene>
   </body>
 </html>
