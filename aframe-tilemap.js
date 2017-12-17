@@ -408,10 +408,10 @@ AFRAME.registerComponent('instanced-tilemap', {
         const uniforms = THREE.UniformsUtils.clone(shader.uniforms);
         updateUniforms(uniforms, meshMaterial);
 
-        console.log(uuid);
+        //console.log(uuid);
         if (meshMaterial.type == 'MeshStandardMaterial') {
-          console.log(meshMaterial);
-          console.log(uniforms);
+          //console.log(meshMaterial);
+          //console.log(uniforms);
         }
 
         // Model Matrix
