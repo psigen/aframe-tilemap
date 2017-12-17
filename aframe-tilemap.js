@@ -7,7 +7,7 @@ AFRAME.registerComponent('tilemap', {
     debug: { type: 'boolean', default: true },
   },
 
-  init: function() {
+  init() {
     const data = this.data;
     const el = this.el;
     const tiles = (this.tiles = {});
@@ -21,14 +21,18 @@ AFRAME.registerComponent('tilemap', {
     }
 
     // TODO: add event handler for new children.
+    this.constructTiles(tiles);
     this.bake();
   },
+
+  // 1. Take all the meshes in the tile
 
   // 1. Get image from this.data.
   // 2. For each pixel in image.
   // 3. If the pixel value is in this.tiles.
   // 4. Add that tile at the corresponding position and rotation.
-  bake: function() {
+  // We will create a map of tileId => array of meshes
+  bake() {
     const t0 = performance.now();
 
     const M_TAU_SCALED = 2.0 * Math.PI / 256.0;
@@ -50,6 +54,7 @@ AFRAME.registerComponent('tilemap', {
 
     let index = 0;
     for (let row = 0; row < imgHeight; ++row) {
+      console.log(row);
       for (let col = 0; col < imgWidth; ++col) {
         // Extract the pixel components used for the tile rasterization.
         const [r, g, b, a] = data.slice(index, index + 4);
@@ -61,16 +66,10 @@ AFRAME.registerComponent('tilemap', {
 
         // Retrieve the appropriate tile geometry and merge it into place.
         if (tileId in tiles) {
-          const tile = tiles[tileId];
-          const tileO3D = tile.el.object3D;
-          const instanceO3D = tileO3D.clone();
-
-          instanceO3D.translateX(tileWidth * col + tileOffsetX);
-          instanceO3D.translateY(tileHeight * row + tileOffsetY);
-          instanceO3D.rotateZ(rotation);
-          instanceO3D.visible = true;
-
-          this.el.object3D.add(instanceO3D);
+          const x = tileWidth * col + tileOffsetX;
+          const y = tileHeight * row + tileOffsetY;
+          this.addTile(tileId, x, y, rotation);
+          //console.log((row, col));
         }
       }
     }
@@ -78,15 +77,72 @@ AFRAME.registerComponent('tilemap', {
     // If the debug flag is set, print timing metrics.
     if (this.data.debug) {
       const t1 = performance.now();
-      console.log(`Tilemap creation took ${t1 - t0} milliseconds.`);
+      console.log(`Tile mesh creation took ${t1 - t0} milliseconds.`);
     }
   },
 
-  update: function(oldData) {
+  addTile(tileId, x, y, theta) {
+    const mapMeshesEntry = this.mapMeshes[tileId];
+    const tileMeshesEntry = this.tileMeshes[tileId];
+
+    // TODO: what is the performance of this?
+    for (const uuid in tileMeshesEntry) {
+      const tileMesh = tileMeshesEntry[uuid];
+      const mapMesh = mapMeshesEntry[uuid];
+
+      const matrix = new THREE.Matrix4().copy(tileMesh.matrix);
+      matrix.multiply(new THREE.Matrix4().makeTranslation(x, y, 0.0));
+      matrix.multiply(new THREE.Matrix4().makeRotationZ(theta));
+
+      mapMesh.geometry.merge(tileMesh.geometry, matrix);
+    }
+  },
+
+  constructTiles(tiles) {
+    const t0 = performance.now();
+
+    const tileMeshes = {};
+    this.tileMeshes = tileMeshes;
+
+    const mapMeshes = {};
+    this.mapMeshes = mapMeshes;
+
+    for (const tileId in tiles) {
+      const tile = tiles[tileId];
+      const tileMeshesEntry = {};
+      const mapMeshesEntry = {};
+
+      tile.el.object3D.traverse(tileMesh => {
+        if (tileMesh.type !== 'Mesh') return;
+
+        const uuid = tileMesh.parent.uuid;
+        tileMesh.updateMatrix();
+        tileMeshesEntry[uuid] = tileMesh;
+
+        const mapMesh = new THREE.Mesh(new THREE.Geometry(), tileMesh.material);
+        this.el.object3D.add(mapMesh);
+        mapMeshesEntry[uuid] = mapMesh;
+      });
+
+      this.tileMeshes[tileId] = tileMeshesEntry;
+      this.mapMeshes[tileId] = mapMeshesEntry;
+    }
+
+    console.log(tileMeshes);
+    console.log(mapMeshes);
+
+    // If the debug flag is set, print timing metrics.
+    if (this.data.debug) {
+      const t1 = performance.now();
+      console.log(`Tile cache creation took ${t1 - t0} milliseconds.`);
+    }
+  },
+
+  update(oldData) {
     // TODO: Regenerate mesh if these properties change.
   },
 
-  remove: function() {
+  remove() {
     // Do nothing.
   },
 });

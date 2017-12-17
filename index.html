@@ -16,13 +16,15 @@
       <a-assets>
         <a-asset-item id="brainstem" src="https://cdn.aframe.io/test-models/models/glTF-2.0/brainstem/BrainStem.gltf"></a-asset-item>
         <a-asset-item id="cityModel" src="https://cdn.aframe.io/test-models/models/glTF-2.0/virtualcity/VC.gltf"></a-asset-item>
-        <img id="tilemap-image" src="tilemap.png">
+        <img id="tilemap-image" src="tilemap-large.png">
       </a-assets>
 
       <a-entity tilemap="src: #tilemap-image" position="0 0 -20">
         <a-entity tile="1" geometry="primitive: box; buffer: false" visible="false"></a-entity>
-        <a-entity tile="2" geometry="primitive: sphere; buffer: false" visible="false"></a-entity>
-        <a-entity tile="3" geometry="primitive: cylinder; buffer: false" visible="false"></a-entity>
+        <a-entity tile="2" geometry="primitive: box; buffer: false" visible="false"></a-entity>
+        <a-entity tile="3" geometry="primitive: box; buffer: false" visible="false"></a-entity>
+        <!--<a-entity tile="2" geometry="primitive: sphere; buffer: false" visible="false"></a-entity>
+        <a-entity tile="3" geometry="primitive: cylinder; buffer: false" visible="false"></a-entity>-->
       </a-entity>
 
       <a-sky color="#ECECEC"></a-sky>
