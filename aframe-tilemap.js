@@ -364,7 +364,7 @@ AFRAME.registerComponent('instanced-tilemap', {
         tiles[tile.data.id] = {
           entity: tile,
           meshes: {},
-          instances: { offsets: [], orientations: [] },
+          instances: { offsets: [] },
         };
       }
     }
@@ -391,10 +391,6 @@ AFRAME.registerComponent('instanced-tilemap', {
       const offsetAttribute = new THREE.InstancedBufferAttribute(
         new Float32Array(instances.offsets),
         3,
-      );
-      const orientationAttribute = new THREE.InstancedBufferAttribute(
-        new Float32Array(instances.orientations),
-        4,
       );
 
       // Iterate over each mesh in this tile.
@@ -451,12 +447,7 @@ AFRAME.registerComponent('instanced-tilemap', {
             meshGeometry.getAttribute(attribute),
           );
         }
-
         instanceGeometry.addAttribute('tilemapOffset', offsetAttribute);
-        instanceGeometry.addAttribute(
-          'tilemapOrientation',
-          orientationAttribute,
-        );
 
         const instance = new THREE.Mesh(instanceGeometry, instanceMaterial);
         this.el.object3D.add(instance);
@@ -509,19 +500,10 @@ AFRAME.registerComponent('instanced-tilemap', {
           const instances = tiles[tileId].instances;
           const x = tileWidth * col + tileOffsetX;
           const y = tileHeight * row + tileOffsetY;
-          const orientation = new THREE.Quaternion().setFromAxisAngle(
-            Z_AXIS,
-            M_TAU_SCALED * b,
-          );
+          const theta = M_TAU_SCALED * b;
 
           // Add this instance's position to the instanced attributes.
-          instances.offsets.push(x, y, 0);
-          instances.orientations.push(
-            orientation.x,
-            orientation.y,
-            orientation.z,
-            orientation.w,
-          );
+          instances.offsets.push(x, y, theta);
         }
       }
     }
