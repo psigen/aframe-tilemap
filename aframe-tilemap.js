@@ -1,3 +1,218 @@
+AFRAME.registerComponent('instanced-tilemap', {
+  schema: {
+    src: { type: 'asset' },
+    tileWidth: { type: 'number', default: 2 },
+    tileHeight: { type: 'number', default: 2 },
+    origin: { type: 'vec2', default: { x: 0.5, y: 0.5 } },
+    debug: { type: 'boolean', default: true },
+  },
+
+  init() {
+    const el = this.el;
+    const tiles = (this.tiles = {});
+
+    // Record all current tile children of this component.
+    for (const child of el.children) {
+      const tile = child.components.tile;
+      if (tile) {
+        tiles[tile.data.id] = {
+          entity: tile,
+          meshes: {},
+          instances: { offsets: [], orientations: [] },
+        };
+      }
+    }
+
+    // TODO: add event handler for new children.
+    // Construct tilemap after a number of pre-processing steps.
+    this.constructTiles().then(() => {
+      this.constructGeometry();
+      this.constructMeshes();
+    });
+  },
+
+  // Take all map geometry and add it as meshes to the scene.
+  constructMeshes() {
+    const t0 = performance.now();
+
+    const tiles = this.tiles;
+    const instanceMaterial = new THREE.RawShaderMaterial({
+      uniforms: {
+        map: { value: new THREE.TextureLoader().load('tilemap-64px.png') },
+      },
+      vertexShader: document.getElementById('vertexShader').textContent,
+      fragmentShader: document.getElementById('fragmentShader').textContent,
+    });
+
+    for (const tileId in tiles) {
+      const tile = tiles[tileId];
+      const instances = tile.instances;
+      if (instances.offsets.length <= 0) continue;
+
+      // Create instance attributes for all meshes in this tile.
+      const offsetAttribute = new THREE.InstancedBufferAttribute(
+        new Float32Array(instances.offsets),
+        3,
+      );
+      const orientationAttribute = new THREE.InstancedBufferAttribute(
+        new Float32Array(instances.orientations),
+        4,
+      );
+
+      // Iterate over each mesh in this tile.
+      for (const uuid in tile.meshes) {
+        const mesh = tile.meshes[uuid];
+        const meshGeometry = mesh.geometry;
+
+        const instanceGeometry = new THREE.InstancedBufferGeometry();
+        instanceGeometry.index = meshGeometry.index;
+        instanceGeometry.attributes.position = meshGeometry.attributes.position;
+        instanceGeometry.attributes.uv = meshGeometry.attributes.uv;
+
+        instanceGeometry.addAttribute('offset', offsetAttribute);
+        instanceGeometry.addAttribute('orientation', orientationAttribute);
+
+        const instance = new THREE.Mesh(instanceGeometry, instanceMaterial);
+        this.el.object3D.add(instance);
+      }
+    }
+
+    // If the debug flag is set, print timing metrics.
+    if (this.data.debug) {
+      const t1 = performance.now();
+      console.log(`Tile map baking took ${(t1 - t0).toFixed(2)} ms.`);
+    }
+  },
+
+  // 1. Get image from this.data.
+  // 2. For each pixel in image.
+  // 3. If the pixel value is in this.tiles.
+  // 4. Add that tile at the corresponding position and rotation.
+  // We will create a map of tileId => array of meshes
+  constructGeometry() {
+    const t0 = performance.now();
+
+    const M_TAU_SCALED = 2.0 * Math.PI / 256.0;
+    const tiles = this.tiles;
+
+    const img = this.data.src;
+    const imgWidth = img.naturalWidth;
+    const imgHeight = img.naturalHeight;
+
+    const tileWidth = this.data.tileWidth;
+    const tileHeight = this.data.tileHeight;
+    const tileOffsetX = -tileWidth * imgWidth * this.data.origin.x;
+    const tileOffsetY = -tileHeight * imgHeight * this.data.origin.y;
+
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    context.drawImage(img, 0, 0);
+    const data = context.getImageData(0, 0, imgWidth, imgHeight).data;
+
+    let index = 0;
+    for (let row = 0; row < imgHeight; ++row) {
+      for (let col = 0; col < imgWidth; ++col) {
+        // Extract the pixel components used for the tile rasterization.
+        const [r, g, b, a] = data.slice(index, index + 4);
+        index += 4;
+
+        // Compute the tileId and rotation associated with this tile.
+        const tileId = 256 * r + g;
+
+        // Retrieve the appropriate tile geometry and merge it into place.
+        if (tileId in tiles) {
+          // Retrieve instance and tile position.
+          const instances = tiles[tileId].instances;
+          const x = tileWidth * col + tileOffsetX;
+          const y = tileHeight * row + tileOffsetY;
+          const theta = M_TAU_SCALED * b;
+
+          // Compute relative offset to origin of tilemap.
+          const matrix = new THREE.Matrix4().makeTranslation(x, y, 0.0);
+          matrix.multiply(new THREE.Matrix4().makeRotationZ(theta));
+
+          // Decompose matrix into a translation and rotation.
+          const offset = new THREE.Vector3();
+          const orientation = new THREE.Quaternion();
+          const scale = new THREE.Vector3();
+          matrix.decompose(offset, orientation, scale);
+
+          instances.offsets.push(offset.x, offset.y, offset.z);
+          instances.orientations.push(
+            orientation.x,
+            orientation.y,
+            orientation.z,
+            orientation.w,
+          );
+        }
+      }
+    }
+
+    // If the debug flag is set, print timing metrics.
+    if (this.data.debug) {
+      const t1 = performance.now();
+      console.log(`Tile map parsing took ${(t1 - t0).toFixed(2)} ms.`);
+    }
+  },
+
+  constructTiles() {
+    const t0 = performance.now();
+    const tiles = this.tiles;
+    const tileLoadingPromises = [];
+
+    for (const tileId in tiles) {
+      const tile = tiles[tileId];
+      const meshes = tile.meshes;
+
+      const tileLoadingPromise = new Promise((resolve, reject) => {
+        const defineTile = () => {
+          tile.entity.el.object3D.traverse(tileMesh => {
+            if (tileMesh.type !== 'Mesh') return;
+
+            const uuid = tileMesh.parent.uuid;
+            tileMesh.updateMatrixWorld();
+            meshes[uuid] = {
+              mesh: tileMesh,
+              geometry:
+                tileMesh.geometry instanceof THREE.BufferGeometry
+                  ? tileMesh.geometry
+                  : new THREE.BufferGeometry().fromGeometry(tileMesh.geometry),
+            };
+          });
+
+          resolve();
+        };
+
+        if (tile.entity.data.isLoaded) {
+          tile.entity.el.addEventListener('model-loaded', e => {
+            defineTile();
+          });
+        } else {
+          defineTile();
+        }
+      });
+
+      tileLoadingPromises.push(tileLoadingPromise);
+    }
+
+    // If the debug flag is set, print timing metrics.
+    if (this.data.debug) {
+      const t1 = performance.now();
+      console.log(`Tile definition took ${(t1 - t0).toFixed(2)} ms.`);
+    }
+
+    return Promise.all(tileLoadingPromises);
+  },
+
+  update(oldData) {
+    // TODO: Regenerate mesh if these properties change.
+  },
+
+  remove() {
+    // Do nothing.
+  },
+});
+
 AFRAME.registerComponent('tilemap', {
   schema: {
     src: { type: 'asset' },
