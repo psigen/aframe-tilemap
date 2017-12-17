@@ -16,25 +16,25 @@ AFRAME.registerComponent('tilemap', {
     for (const child of el.children) {
       const tile = child.components.tile;
       if (tile) {
-        tiles[tile.data] = tile;
+        tiles[tile.data.id] = tile;
       }
     }
 
     // TODO: add event handler for new children.
-    this.constructTiles(tiles);
-    this.constructMap();
-    this.bake();
+    this.constructTiles().then(() => {
+      this.constructMap();
+      this.bake();
+    });
   },
 
-  // Take all map Geometry constructed so far and put them in BufferGeometry
+  // Take all map Geometry constructed so far and put them in BufferGeometry.
   bake() {
     const t0 = performance.now();
 
     const mapGeometries = this.mapGeometries;
     const tileMeshes = this.tileMeshes;
 
-    const mapMeshes = {};
-    this.mapMeshes = mapMeshes;
+    const mapMeshes = (this.mapMeshes = {});
 
     for (const tileId in tileMeshes) {
       const tileMeshesEntry = tileMeshes[tileId];
@@ -90,9 +90,13 @@ AFRAME.registerComponent('tilemap', {
     context.drawImage(img, 0, 0);
     const data = context.getImageData(0, 0, imgWidth, imgHeight).data;
 
+    this.el.object3D.parent.updateMatrixWorld();
+    this.invMatrixWorld = new THREE.Matrix4().getInverse(
+      this.el.object3D.matrixWorld,
+    );
+
     let index = 0;
     for (let row = 0; row < imgHeight; ++row) {
-      console.log(row);
       for (let col = 0; col < imgWidth; ++col) {
         // Extract the pixel components used for the tile rasterization.
         const [r, g, b, a] = data.slice(index, index + 4);
@@ -127,52 +131,70 @@ AFRAME.registerComponent('tilemap', {
       const tileMesh = tileMeshesEntry[uuid];
       const mapGeometry = mapGeometriesEntry[uuid];
 
-      const matrix = new THREE.Matrix4().copy(tileMesh.matrix);
+      const matrix = new THREE.Matrix4().copy(this.invMatrixWorld);
       matrix.multiply(new THREE.Matrix4().makeTranslation(x, y, 0.0));
       matrix.multiply(new THREE.Matrix4().makeRotationZ(theta));
+      matrix.multiply(tileMesh.matrixWorld);
 
-      mapGeometry.merge(tileMesh.geometry, matrix);
+      let geometry = tileMesh.geometry;
+      if (geometry instanceof THREE.BufferGeometry) {
+        geometry = new THREE.Geometry().fromBufferGeometry(tileMesh.geometry);
+      }
+      mapGeometry.merge(geometry, matrix);
     }
   },
 
   constructTiles() {
     const t0 = performance.now();
     const tiles = this.tiles;
+    const tileLoadingPromises = [];
 
-    const tileMeshes = {};
-    this.tileMeshes = tileMeshes;
-
-    const mapGeometries = {};
-    this.mapGeometries = mapGeometries;
+    this.mapGeometries = {};
+    this.tileMeshes = {};
 
     for (const tileId in tiles) {
       const tile = tiles[tileId];
-      const tileMeshesEntry = {};
-      const mapGeometriesEntry = {};
 
-      tile.el.object3D.traverse(tileMesh => {
-        if (tileMesh.type !== 'Mesh') return;
+      const tileLoadingPromise = new Promise((resolve, reject) => {
+        const defineTile = () => {
+          const tileMeshesEntry = {};
+          const mapGeometriesEntry = {};
 
-        const uuid = tileMesh.parent.uuid;
-        tileMesh.updateMatrix();
-        tileMeshesEntry[uuid] = tileMesh;
+          tile.el.object3D.traverse(tileMesh => {
+            if (tileMesh.type !== 'Mesh') return;
 
-        const mapGeometry = new THREE.Geometry();
-        mapGeometriesEntry[uuid] = mapGeometry;
+            const uuid = tileMesh.parent.uuid;
+            tileMesh.parent.updateMatrixWorld();
+            tileMeshesEntry[uuid] = tileMesh;
+
+            const mapGeometry = new THREE.Geometry();
+            mapGeometriesEntry[uuid] = mapGeometry;
+          });
+
+          this.mapGeometries[tileId] = mapGeometriesEntry;
+          this.tileMeshes[tileId] = tileMeshesEntry;
+          resolve();
+        };
+
+        if (tile.data.isLoaded) {
+          tile.el.addEventListener('model-loaded', e => {
+            defineTile();
+          });
+        } else {
+          defineTile();
+        }
       });
 
-      this.tileMeshes[tileId] = tileMeshesEntry;
-      this.mapGeometries[tileId] = mapGeometriesEntry;
+      tileLoadingPromises.push(tileLoadingPromise);
     }
-
-    console.log(tileMeshes);
-    console.log(mapGeometries);
 
     // If the debug flag is set, print timing metrics.
     if (this.data.debug) {
       const t1 = performance.now();
       console.log(`Tile cache creation took ${t1 - t0} milliseconds.`);
     }
+
+    return Promise.all(tileLoadingPromises);
   },
 
   update(oldData) {
@@ -188,5 +210,8 @@ AFRAME.registerComponent('tilemap', {
 // will be merged to construct the tile element of the given value.
 // Generally, these entity should also have the component visible="false".
 AFRAME.registerComponent('tile', {
-  schema: { type: 'int' },
+  schema: {
+    id: { type: 'int' },
+    isLoaded: { type: 'boolean', default: false },
+  },
 });
