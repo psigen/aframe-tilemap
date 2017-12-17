@@ -8,7 +8,6 @@ AFRAME.registerComponent('tilemap', {
   },
 
   init() {
-    const data = this.data;
     const el = this.el;
     const tiles = (this.tiles = {});
 
@@ -21,20 +20,20 @@ AFRAME.registerComponent('tilemap', {
     }
 
     // TODO: add event handler for new children.
+    // Construct tilemap after a number of pre-processing steps.
     this.constructTiles().then(() => {
-      this.constructMap();
-      this.bake();
+      this.constructGeometry();
+      this.constructMeshes();
     });
   },
 
-  // Take all map Geometry constructed so far and put them in BufferGeometry.
-  bake() {
+  // Take all map geometry and add it as meshes to the scene.
+  constructMeshes() {
     const t0 = performance.now();
 
-    const mapGeometries = this.mapGeometries;
     const tileMeshes = this.tileMeshes;
-
     const mapMeshes = (this.mapMeshes = {});
+    const mapGeometries = this.mapGeometries;
 
     for (const tileId in tileMeshes) {
       const tileMeshesEntry = tileMeshes[tileId];
@@ -56,18 +55,16 @@ AFRAME.registerComponent('tilemap', {
     // If the debug flag is set, print timing metrics.
     if (this.data.debug) {
       const t1 = performance.now();
-      console.log(`Tile map baking took ${t1 - t0} milliseconds.`);
+      console.log(`Tile map baking took ${(t1 - t0).toFixed(2)} ms.`);
     }
   },
-
-  // 1. Take all the meshes in the tile
 
   // 1. Get image from this.data.
   // 2. For each pixel in image.
   // 3. If the pixel value is in this.tiles.
   // 4. Add that tile at the corresponding position and rotation.
   // We will create a map of tileId => array of meshes
-  constructMap() {
+  constructGeometry() {
     const t0 = performance.now();
 
     const M_TAU_SCALED = 2.0 * Math.PI / 256.0;
@@ -88,7 +85,7 @@ AFRAME.registerComponent('tilemap', {
     const data = context.getImageData(0, 0, imgWidth, imgHeight).data;
 
     this.el.object3D.parent.updateMatrixWorld();
-    this.invMatrixWorld = new THREE.Matrix4().getInverse(
+    const invRootMatrixWorld = new THREE.Matrix4().getInverse(
       this.el.object3D.matrixWorld,
     );
 
@@ -107,7 +104,7 @@ AFRAME.registerComponent('tilemap', {
         if (tileId in tiles) {
           const x = tileWidth * col + tileOffsetX;
           const y = tileHeight * row + tileOffsetY;
-          this.addTile(tileId, x, y, rotation);
+          this.addTileGeometry(tileId, x, y, rotation, invRootMatrixWorld);
         }
       }
     }
@@ -115,11 +112,11 @@ AFRAME.registerComponent('tilemap', {
     // If the debug flag is set, print timing metrics.
     if (this.data.debug) {
       const t1 = performance.now();
-      console.log(`Tile mesh creation took ${t1 - t0} milliseconds.`);
+      console.log(`Tile mesh creation took ${(t1 - t0).toFixed(2)} ms.`);
     }
   },
 
-  addTile(tileId, x, y, theta) {
+  addTileGeometry(tileId, x, y, theta, invRootMatrixWorld) {
     const mapGeometriesEntry = this.mapGeometries[tileId];
     const tileMeshesEntry = this.tileMeshes[tileId];
 
@@ -130,7 +127,7 @@ AFRAME.registerComponent('tilemap', {
 
       const matrix = new THREE.Matrix4().makeTranslation(x, y, 0.0);
       matrix.multiply(new THREE.Matrix4().makeRotationZ(theta));
-      matrix.multiply(this.invMatrixWorld);
+      matrix.multiply(invRootMatrixWorld);
       matrix.multiply(tileMesh.matrixWorld);
 
       let geometry = tileMesh.geometry;
@@ -146,8 +143,8 @@ AFRAME.registerComponent('tilemap', {
     const tiles = this.tiles;
     const tileLoadingPromises = [];
 
-    this.mapGeometries = {};
-    this.tileMeshes = {};
+    const mapGeometries = (this.mapGeometries = {});
+    const tileMeshes = (this.tileMeshes = {});
 
     for (const tileId in tiles) {
       const tile = tiles[tileId];
@@ -168,8 +165,8 @@ AFRAME.registerComponent('tilemap', {
             mapGeometriesEntry[uuid] = mapGeometry;
           });
 
-          this.mapGeometries[tileId] = mapGeometriesEntry;
-          this.tileMeshes[tileId] = tileMeshesEntry;
+          mapGeometries[tileId] = mapGeometriesEntry;
+          tileMeshes[tileId] = tileMeshesEntry;
           resolve();
         };
 
@@ -188,7 +185,7 @@ AFRAME.registerComponent('tilemap', {
     // If the debug flag is set, print timing metrics.
     if (this.data.debug) {
       const t1 = performance.now();
-      console.log(`Tile cache creation took ${t1 - t0} milliseconds.`);
+      console.log(`Tile cache creation took ${(t1 - t0).toFixed(2)} ms.`);
     }
 
     return Promise.all(tileLoadingPromises);
