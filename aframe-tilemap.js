@@ -66,11 +66,18 @@ AFRAME.registerComponent('instanced-tilemap', {
 
         const instanceGeometry = new THREE.InstancedBufferGeometry();
         instanceGeometry.index = meshGeometry.index;
-        instanceGeometry.attributes.position = meshGeometry.attributes.position;
-        instanceGeometry.attributes.uv = meshGeometry.attributes.uv;
+        for (const attribute in meshGeometry.attributes) {
+          instanceGeometry.addAttribute(
+            attribute,
+            meshGeometry.getAttribute(attribute),
+          );
+        }
 
-        instanceGeometry.addAttribute('offset', offsetAttribute);
-        instanceGeometry.addAttribute('orientation', orientationAttribute);
+        instanceGeometry.addAttribute('tilemapOffset', offsetAttribute);
+        instanceGeometry.addAttribute(
+          'tilemapOrientation',
+          orientationAttribute,
+        );
 
         const instance = new THREE.Mesh(instanceGeometry, instanceMaterial);
         this.el.object3D.add(instance);
@@ -160,24 +167,32 @@ AFRAME.registerComponent('instanced-tilemap', {
     const tiles = this.tiles;
     const tileLoadingPromises = [];
 
+    this.el.object3D.updateMatrixWorld();
+    const invMatrixWorld = new THREE.Matrix4().getInverse(
+      this.el.object3D.matrixWorld,
+    );
+
     for (const tileId in tiles) {
       const tile = tiles[tileId];
       const meshes = tile.meshes;
 
       const tileLoadingPromise = new Promise((resolve, reject) => {
         const defineTile = () => {
-          tile.entity.el.object3D.traverse(tileMesh => {
-            if (tileMesh.type !== 'Mesh') return;
+          tile.entity.el.object3D.traverse(mesh => {
+            if (mesh.type !== 'Mesh') return;
 
-            const uuid = tileMesh.parent.uuid;
-            tileMesh.updateMatrixWorld();
-            meshes[uuid] = {
-              mesh: tileMesh,
-              geometry:
-                tileMesh.geometry instanceof THREE.BufferGeometry
-                  ? tileMesh.geometry
-                  : new THREE.BufferGeometry().fromGeometry(tileMesh.geometry),
-            };
+            const geometry =
+              mesh.geometry instanceof THREE.BufferGeometry
+                ? new THREE.BufferGeometry().copy(mesh.geometry)
+                : new THREE.BufferGeometry().fromGeometry(mesh.geometry);
+
+            mesh.updateMatrixWorld();
+            const matrix = new THREE.Matrix4()
+              .copy(invMatrixWorld)
+              .multiply(mesh.matrixWorld);
+            geometry.applyMatrix(matrix);
+
+            meshes[mesh.uuid] = { mesh, geometry };
           });
 
           resolve();
@@ -185,7 +200,12 @@ AFRAME.registerComponent('instanced-tilemap', {
 
         if (tile.entity.data.isLoaded) {
           tile.entity.el.addEventListener('model-loaded', e => {
-            defineTile();
+            // For some reason, there is some additional time for the
+            // transformations in the mesh.matrixWorld to update after the
+            // 'model-loaded' event is emitted.
+            setTimeout(() => {
+              defineTile();
+            }, 100);
           });
         } else {
           defineTile();
