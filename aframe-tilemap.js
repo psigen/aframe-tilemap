@@ -45,10 +45,7 @@ AFRAME.registerComponent('tilemap', {
         const mapGeometry = mapGeometriesEntry[uuid];
         const tileMesh = tileMeshesEntry[uuid];
 
-        const mapMesh = new THREE.Mesh(
-          new THREE.BufferGeometry().fromGeometry(mapGeometry),
-          tileMesh.material,
-        );
+        const mapMesh = new THREE.Mesh(mapGeometry, tileMesh.material);
         this.el.object3D.add(mapMesh);
         mapMeshesEntry[uuid] = mapMesh;
       }
