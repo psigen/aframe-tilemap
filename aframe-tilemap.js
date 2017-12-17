@@ -128,9 +128,9 @@ AFRAME.registerComponent('tilemap', {
       const tileMesh = tileMeshesEntry[uuid];
       const mapGeometry = mapGeometriesEntry[uuid];
 
-      const matrix = new THREE.Matrix4().copy(this.invMatrixWorld);
-      matrix.multiply(new THREE.Matrix4().makeTranslation(x, y, 0.0));
+      const matrix = new THREE.Matrix4().makeTranslation(x, y, 0.0);
       matrix.multiply(new THREE.Matrix4().makeRotationZ(theta));
+      matrix.multiply(this.invMatrixWorld);
       matrix.multiply(tileMesh.matrixWorld);
 
       let geometry = tileMesh.geometry;
