@@ -1,3 +1,7 @@
+// This code is copied directly out of the THREE.WebGLRenderer, as this was the
+// most consistent way I could think to replicate the functionality of the
+// original prebuilt shaders in a ShaderMaterial.
+
 function refreshUniformsCommon(uniforms, material) {
   uniforms.opacity.value = material.opacity;
 

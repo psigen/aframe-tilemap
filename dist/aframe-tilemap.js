@@ -7,7 +7,7 @@
 		exports["aframeTilemap"] = factory(require("THREE"), require("AFRAME"));
 	else
 		root["aframeTilemap"] = factory(root["THREE"], root["AFRAME"]);
-})(typeof self !== 'undefined' ? self : this, function(__WEBPACK_EXTERNAL_MODULE_1__, __WEBPACK_EXTERNAL_MODULE_2__) {
+})(typeof self !== 'undefined' ? self : this, function(__WEBPACK_EXTERNAL_MODULE_0__, __WEBPACK_EXTERNAL_MODULE_1__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -70,11 +70,63 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 0);
+/******/ 	return __webpack_require__(__webpack_require__.s = 3);
 /******/ })
 /************************************************************************/
 /******/ ([
 /* 0 */
+/***/ (function(module, exports) {
+
+module.exports = __WEBPACK_EXTERNAL_MODULE_0__;
+
+/***/ }),
+/* 1 */
+/***/ (function(module, exports) {
+
+module.exports = __WEBPACK_EXTERNAL_MODULE_1__;
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+var SHADERLIB_MATERIALS = exports.SHADERLIB_MATERIALS = {
+  MeshBasicMaterial: THREE.ShaderLib.basic,
+  MeshStandardMaterial: THREE.ShaderLib.standard
+};
+var M_TAU_SCALED = exports.M_TAU_SCALED = 2.0 * Math.PI / 256.0;
+var Z_AXIS = exports.Z_AXIS = new THREE.Vector3(0, 0, 1);
+
+/***/ }),
+/* 3 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+__webpack_require__(4);
+
+__webpack_require__(5);
+
+__webpack_require__(7);
+
+// The tile component is a placeholder used to identify which <a-entity>
+// will be merged to construct the tile element of the given value.
+// Generally, these entities will also have the component visible="false".
+AFRAME.registerComponent('tile', {
+  schema: {
+    id: { type: 'int' },
+    isLoaded: { type: 'boolean', default: false }
+  }
+});
+
+/***/ }),
+/* 4 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -82,28 +134,152 @@ return /******/ (function(modules) { // webpackBootstrap
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
-var _three = __webpack_require__(1);
+var _three = __webpack_require__(0);
 
 var THREE = _interopRequireWildcard(_three);
 
-var _aframe = __webpack_require__(2);
+var _aframe = __webpack_require__(1);
 
 var _aframe2 = _interopRequireDefault(_aframe);
 
-var _conversions = __webpack_require__(3);
+var _constants = __webpack_require__(2);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-var SHADERLIB_MATERIALS = {
-  MeshBasicMaterial: THREE.ShaderLib.basic,
-  MeshStandardMaterial: THREE.ShaderLib.standard
-};
-var M_TAU_SCALED = 2.0 * Math.PI / 256.0;
-var Z_AXIS = new THREE.Vector3(0, 0, 1);
+_aframe2.default.registerComponent('tilemap-cloned', {
+  schema: {
+    src: { type: 'asset' },
+    tileWidth: { type: 'number', default: 10 },
+    tileHeight: { type: 'number', default: 10 },
+    origin: { type: 'vec2', default: { x: 0.5, y: 0.5 } },
+    debug: { type: 'boolean', default: true }
+  },
 
-_aframe2.default.registerComponent('instanced-tilemap', {
+  init: function init() {
+    var el = this.el;
+    var tiles = this.tiles = {};
+
+    // Record all current tile children of this component.
+    var _iteratorNormalCompletion = true;
+    var _didIteratorError = false;
+    var _iteratorError = undefined;
+
+    try {
+      for (var _iterator = el.children[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+        var child = _step.value;
+
+        var tile = child.components.tile;
+        if (tile) {
+          tiles[tile.data] = tile;
+        }
+      }
+
+      // TODO: add event handler for new children.
+    } catch (err) {
+      _didIteratorError = true;
+      _iteratorError = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion && _iterator.return) {
+          _iterator.return();
+        }
+      } finally {
+        if (_didIteratorError) {
+          throw _iteratorError;
+        }
+      }
+    }
+
+    this.constructClones();
+  },
+
+  constructClones: function constructClones() {
+    var t0 = performance.now();
+    var tiles = this.tiles;
+
+    var img = this.data.src;
+    var imgWidth = img.naturalWidth;
+    var imgHeight = img.naturalHeight;
+
+    var tileWidth = this.data.tileWidth;
+    var tileHeight = this.data.tileHeight;
+    var tileOffsetX = -tileWidth * imgWidth * this.data.origin.x;
+    var tileOffsetY = -tileHeight * imgHeight * this.data.origin.y;
+
+    var canvas = document.createElement('canvas');
+    var context = canvas.getContext('2d');
+    context.drawImage(img, 0, 0);
+    var data = context.getImageData(0, 0, imgWidth, imgHeight).data;
+
+    var index = 0;
+    for (var row = 0; row < imgHeight; ++row) {
+      for (var col = 0; col < imgWidth; ++col) {
+        // Extract the pixel components used for the tile rasterization.
+        var _data$slice = data.slice(index, index + 4),
+            _data$slice2 = _slicedToArray(_data$slice, 4),
+            r = _data$slice2[0],
+            g = _data$slice2[1],
+            b = _data$slice2[2],
+            a = _data$slice2[3];
+
+        index += 4;
+
+        // Compute the tileId and rotation associated with this tile.
+        var tileId = 256 * r + g;
+        var rotation = _constants.M_TAU_SCALED * b;
+
+        // Retrieve the appropriate tile geometry and merge it into place.
+        if (tileId in tiles) {
+          var tile = tiles[tileId];
+          var tileO3D = tile.el.object3D;
+          var instanceO3D = tileO3D.clone();
+
+          instanceO3D.translateX(tileWidth * col + tileOffsetX);
+          instanceO3D.translateY(tileHeight * row + tileOffsetY);
+          instanceO3D.rotateZ(rotation);
+          instanceO3D.visible = true;
+
+          this.el.object3D.add(instanceO3D);
+        }
+      }
+    }
+
+    // If the debug flag is set, print timing metrics.
+    if (this.data.debug) {
+      var t1 = performance.now();
+      console.log('Tile cloning took ' + (t1 - t0) + ' milliseconds.');
+    }
+  }
+});
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
+var _three = __webpack_require__(0);
+
+var THREE = _interopRequireWildcard(_three);
+
+var _aframe = __webpack_require__(1);
+
+var _aframe2 = _interopRequireDefault(_aframe);
+
+var _conversions = __webpack_require__(6);
+
+var _constants = __webpack_require__(2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+_aframe2.default.registerComponent('tilemap-instanced', {
   schema: {
     src: { type: 'asset' },
     tileWidth: { type: 'number', default: 2 },
@@ -155,7 +331,7 @@ _aframe2.default.registerComponent('instanced-tilemap', {
     }
 
     this.constructTiles().then(function () {
-      _this.constructGeometry();
+      _this.constructInstances();
       _this.constructMeshes();
     });
   },
@@ -180,21 +356,13 @@ _aframe2.default.registerComponent('instanced-tilemap', {
         var meshGeometry = mesh.geometry;
         var meshMaterial = mesh.mesh.material;
 
-        //const shader = THREE.ShaderLib.basic;
-        var shader = SHADERLIB_MATERIALS[meshMaterial.type];
+        var shader = _constants.SHADERLIB_MATERIALS[meshMaterial.type];
         var uniforms = THREE.UniformsUtils.clone(shader.uniforms);
         (0, _conversions.updateUniforms)(uniforms, meshMaterial);
 
         //console.log(uuid);
-        if (meshMaterial.type == 'MeshStandardMaterial') {}
         //console.log(meshMaterial);
         //console.log(uniforms);
-
-
-        // Model Matrix
-        // Model View Matrix
-        // Normal Matrix
-        // twiddle
 
         var instanceMaterial = new THREE.ShaderMaterial({
           uniforms: uniforms,
@@ -235,7 +403,7 @@ _aframe2.default.registerComponent('instanced-tilemap', {
     // If the debug flag is set, print timing metrics.
     if (this.data.debug) {
       var t1 = performance.now();
-      console.log('Tile map baking took ' + (t1 - t0).toFixed(2) + ' ms.');
+      console.log('Tile mesh creation took ' + (t1 - t0).toFixed(2) + ' ms.');
     }
   },
 
@@ -244,8 +412,7 @@ _aframe2.default.registerComponent('instanced-tilemap', {
   // 2. For each pixel in image.
   // 3. If the pixel value is in this.tiles.
   // 4. Add that tile at the corresponding position and rotation.
-  // We will create a map of tileId => array of meshes
-  constructGeometry: function constructGeometry() {
+  constructInstances: function constructInstances() {
     var t0 = performance.now();
     var tiles = this.tiles;
 
@@ -285,7 +452,7 @@ _aframe2.default.registerComponent('instanced-tilemap', {
           var instances = tiles[tileId].instances;
           var x = tileWidth * col + tileOffsetX;
           var y = tileHeight * row + tileOffsetY;
-          var theta = M_TAU_SCALED * b;
+          var theta = _constants.M_TAU_SCALED * b;
 
           // Add this instance's position to the instanced attributes.
           instances.offsets.push(x, y, theta);
@@ -296,7 +463,7 @@ _aframe2.default.registerComponent('instanced-tilemap', {
     // If the debug flag is set, print timing metrics.
     if (this.data.debug) {
       var t1 = performance.now();
-      console.log('Tile map parsing took ' + (t1 - t0).toFixed(2) + ' ms.');
+      console.log('Tile instancing took ' + (t1 - t0).toFixed(2) + ' ms.');
     }
   },
   constructTiles: function constructTiles() {
@@ -365,262 +532,8 @@ _aframe2.default.registerComponent('instanced-tilemap', {
   }
 });
 
-_aframe2.default.registerComponent('tilemap', {
-  schema: {
-    src: { type: 'asset' },
-    tileWidth: { type: 'number', default: 2 },
-    tileHeight: { type: 'number', default: 2 },
-    origin: { type: 'vec2', default: { x: 0.5, y: 0.5 } },
-    debug: { type: 'boolean', default: true }
-  },
-
-  init: function init() {
-    var _this2 = this;
-
-    var el = this.el;
-    var tiles = this.tiles = {};
-
-    // Record all current tile children of this component.
-    var _iteratorNormalCompletion2 = true;
-    var _didIteratorError2 = false;
-    var _iteratorError2 = undefined;
-
-    try {
-      for (var _iterator2 = el.children[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-        var child = _step2.value;
-
-        var _tile = child.components.tile;
-        if (_tile) {
-          tiles[_tile.data.id] = _tile;
-        }
-      }
-
-      // TODO: add event handler for new children.
-      // Construct tilemap after a number of pre-processing steps.
-    } catch (err) {
-      _didIteratorError2 = true;
-      _iteratorError2 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion2 && _iterator2.return) {
-          _iterator2.return();
-        }
-      } finally {
-        if (_didIteratorError2) {
-          throw _iteratorError2;
-        }
-      }
-    }
-
-    this.constructTiles().then(function () {
-      _this2.constructGeometry();
-      _this2.constructMeshes();
-    });
-  },
-
-
-  // Take all map geometry and add it as meshes to the scene.
-  constructMeshes: function constructMeshes() {
-    var t0 = performance.now();
-
-    var tileMeshes = this.tileMeshes;
-    var mapMeshes = this.mapMeshes = {};
-    var mapGeometries = this.mapGeometries;
-
-    for (var tileId in tileMeshes) {
-      var tileMeshesEntry = tileMeshes[tileId];
-      var mapGeometriesEntry = mapGeometries[tileId];
-      var mapMeshesEntry = {};
-
-      for (var uuid in mapGeometriesEntry) {
-        var mapGeometry = mapGeometriesEntry[uuid];
-        var tileMesh = tileMeshesEntry[uuid];
-
-        var mapMesh = new THREE.Mesh(mapGeometry, tileMesh.material);
-        this.el.object3D.add(mapMesh);
-        mapMeshesEntry[uuid] = mapMesh;
-      }
-
-      mapMeshes[tileId] = mapMeshesEntry;
-    }
-
-    // If the debug flag is set, print timing metrics.
-    if (this.data.debug) {
-      var t1 = performance.now();
-      console.log('Tile map baking took ' + (t1 - t0).toFixed(2) + ' ms.');
-    }
-  },
-
-
-  // 1. Get image from this.data.
-  // 2. For each pixel in image.
-  // 3. If the pixel value is in this.tiles.
-  // 4. Add that tile at the corresponding position and rotation.
-  // We will create a map of tileId => array of meshes
-  constructGeometry: function constructGeometry() {
-    var t0 = performance.now();
-
-    var M_TAU_SCALED = 2.0 * Math.PI / 256.0;
-    var tiles = this.tiles;
-
-    var img = this.data.src;
-    var imgWidth = img.naturalWidth;
-    var imgHeight = img.naturalHeight;
-
-    var tileWidth = this.data.tileWidth;
-    var tileHeight = this.data.tileHeight;
-    var tileOffsetX = -tileWidth * imgWidth * this.data.origin.x;
-    var tileOffsetY = -tileHeight * imgHeight * this.data.origin.y;
-
-    var canvas = document.createElement('canvas');
-    var context = canvas.getContext('2d');
-    context.drawImage(img, 0, 0);
-    var data = context.getImageData(0, 0, imgWidth, imgHeight).data;
-
-    this.el.object3D.parent.updateMatrixWorld();
-    var invRootMatrixWorld = new THREE.Matrix4().getInverse(this.el.object3D.matrixWorld);
-
-    var index = 0;
-    for (var row = 0; row < imgHeight; ++row) {
-      for (var col = 0; col < imgWidth; ++col) {
-        // Extract the pixel components used for the tile rasterization.
-        var _data$slice3 = data.slice(index, index + 4),
-            _data$slice4 = _slicedToArray(_data$slice3, 4),
-            r = _data$slice4[0],
-            g = _data$slice4[1],
-            b = _data$slice4[2],
-            a = _data$slice4[3];
-
-        index += 4;
-
-        // Compute the tileId and rotation associated with this tile.
-        var tileId = 256 * r + g;
-        var rotation = M_TAU_SCALED * b;
-
-        // Retrieve the appropriate tile geometry and merge it into place.
-        if (tileId in tiles) {
-          var x = tileWidth * col + tileOffsetX;
-          var y = tileHeight * row + tileOffsetY;
-          this.addTileGeometry(tileId, x, y, rotation, invRootMatrixWorld);
-        }
-      }
-    }
-
-    // If the debug flag is set, print timing metrics.
-    if (this.data.debug) {
-      var t1 = performance.now();
-      console.log('Tile mesh creation took ' + (t1 - t0).toFixed(2) + ' ms.');
-    }
-  },
-  addTileGeometry: function addTileGeometry(tileId, x, y, theta, invRootMatrixWorld) {
-    var mapGeometriesEntry = this.mapGeometries[tileId];
-    var tileMeshesEntry = this.tileMeshes[tileId];
-
-    // TODO: what is the performance of this?
-    for (var uuid in tileMeshesEntry) {
-      var tileMesh = tileMeshesEntry[uuid];
-      var mapGeometry = mapGeometriesEntry[uuid];
-
-      var matrix = new THREE.Matrix4().makeTranslation(x, y, 0.0);
-      matrix.multiply(new THREE.Matrix4().makeRotationZ(theta));
-      matrix.multiply(invRootMatrixWorld);
-      matrix.multiply(tileMesh.matrixWorld);
-
-      var geometry = tileMesh.geometry;
-      if (geometry instanceof THREE.BufferGeometry) {
-        geometry = new THREE.Geometry().fromBufferGeometry(tileMesh.geometry);
-      }
-      mapGeometry.merge(geometry, matrix);
-    }
-  },
-  constructTiles: function constructTiles() {
-    var t0 = performance.now();
-    var tiles = this.tiles;
-    var tileLoadingPromises = [];
-
-    var mapGeometries = this.mapGeometries = {};
-    var tileMeshes = this.tileMeshes = {};
-
-    var _loop2 = function _loop2(tileId) {
-      var tile = tiles[tileId];
-
-      var tileLoadingPromise = new Promise(function (resolve, reject) {
-        var defineTile = function defineTile() {
-          var tileMeshesEntry = {};
-          var mapGeometriesEntry = {};
-
-          tile.el.object3D.traverse(function (tileMesh) {
-            if (tileMesh.type !== 'Mesh') return;
-
-            var uuid = tileMesh.parent.uuid;
-            tileMesh.parent.updateMatrixWorld();
-            tileMeshesEntry[uuid] = tileMesh;
-
-            var mapGeometry = new THREE.Geometry();
-            mapGeometriesEntry[uuid] = mapGeometry;
-          });
-
-          mapGeometries[tileId] = mapGeometriesEntry;
-          tileMeshes[tileId] = tileMeshesEntry;
-          resolve();
-        };
-
-        if (tile.data.isLoaded) {
-          tile.el.addEventListener('model-loaded', function (e) {
-            defineTile();
-          });
-        } else {
-          defineTile();
-        }
-      });
-
-      tileLoadingPromises.push(tileLoadingPromise);
-    };
-
-    for (var tileId in tiles) {
-      _loop2(tileId);
-    }
-
-    // If the debug flag is set, print timing metrics.
-    if (this.data.debug) {
-      var t1 = performance.now();
-      console.log('Tile cache creation took ' + (t1 - t0).toFixed(2) + ' ms.');
-    }
-
-    return Promise.all(tileLoadingPromises);
-  },
-  update: function update(oldData) {
-    // TODO: Regenerate mesh if these properties change.
-  },
-  remove: function remove() {
-    // Do nothing.
-  }
-});
-
-// The tile component is a placeholder used to identify which <a-entity>
-// will be merged to construct the tile element of the given value.
-// Generally, these entity should also have the component visible="false".
-_aframe2.default.registerComponent('tile', {
-  schema: {
-    id: { type: 'int' },
-    isLoaded: { type: 'boolean', default: false }
-  }
-});
-
 /***/ }),
-/* 1 */
-/***/ (function(module, exports) {
-
-module.exports = __WEBPACK_EXTERNAL_MODULE_1__;
-
-/***/ }),
-/* 2 */
-/***/ (function(module, exports) {
-
-module.exports = __WEBPACK_EXTERNAL_MODULE_2__;
-
-/***/ }),
-/* 3 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -630,6 +543,10 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.updateUniforms = updateUniforms;
+// This code is copied directly out of the THREE.WebGLRenderer, as this was the
+// most consistent way I could think to replicate the functionality of the
+// original prebuilt shaders in a ShaderMaterial.
+
 function refreshUniformsCommon(uniforms, material) {
   uniforms.opacity.value = material.opacity;
 
@@ -942,6 +859,263 @@ function updateUniforms(m_uniforms, material) {
   if (m_uniforms.ltcMat !== undefined) m_uniforms.ltcMat.value = THREE.UniformsLib.LTC_MAT_TEXTURE;
   if (m_uniforms.ltcMag !== undefined) m_uniforms.ltcMag.value = THREE.UniformsLib.LTC_MAG_TEXTURE;
 }
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
+var _three = __webpack_require__(0);
+
+var THREE = _interopRequireWildcard(_three);
+
+var _aframe = __webpack_require__(1);
+
+var _aframe2 = _interopRequireDefault(_aframe);
+
+var _constants = __webpack_require__(2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+_aframe2.default.registerComponent('tilemap-merged', {
+  schema: {
+    src: { type: 'asset' },
+    tileWidth: { type: 'number', default: 2 },
+    tileHeight: { type: 'number', default: 2 },
+    origin: { type: 'vec2', default: { x: 0.5, y: 0.5 } },
+    debug: { type: 'boolean', default: true }
+  },
+
+  init: function init() {
+    var _this = this;
+
+    var el = this.el;
+    var tiles = this.tiles = {};
+
+    // Record all current tile children of this component.
+    var _iteratorNormalCompletion = true;
+    var _didIteratorError = false;
+    var _iteratorError = undefined;
+
+    try {
+      for (var _iterator = el.children[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+        var child = _step.value;
+
+        var tile = child.components.tile;
+        if (tile) {
+          tiles[tile.data.id] = tile;
+        }
+      }
+
+      // TODO: add event handler for new children.
+      // Construct tilemap after a number of pre-processing steps.
+    } catch (err) {
+      _didIteratorError = true;
+      _iteratorError = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion && _iterator.return) {
+          _iterator.return();
+        }
+      } finally {
+        if (_didIteratorError) {
+          throw _iteratorError;
+        }
+      }
+    }
+
+    this.constructTiles().then(function () {
+      _this.constructGeometry();
+      _this.constructMeshes();
+    });
+  },
+
+
+  // Take all map geometry and add it as meshes to the scene.
+  constructMeshes: function constructMeshes() {
+    var t0 = performance.now();
+
+    var tileMeshes = this.tileMeshes;
+    var mapMeshes = this.mapMeshes = {};
+    var mapGeometries = this.mapGeometries;
+
+    for (var tileId in tileMeshes) {
+      var tileMeshesEntry = tileMeshes[tileId];
+      var mapGeometriesEntry = mapGeometries[tileId];
+      var mapMeshesEntry = {};
+
+      for (var uuid in mapGeometriesEntry) {
+        var mapGeometry = mapGeometriesEntry[uuid];
+        var tileMesh = tileMeshesEntry[uuid];
+
+        var mapMesh = new THREE.Mesh(mapGeometry, tileMesh.material);
+        this.el.object3D.add(mapMesh);
+        mapMeshesEntry[uuid] = mapMesh;
+      }
+
+      mapMeshes[tileId] = mapMeshesEntry;
+    }
+
+    // If the debug flag is set, print timing metrics.
+    if (this.data.debug) {
+      var t1 = performance.now();
+      console.log('Tile mesh creation took ' + (t1 - t0).toFixed(2) + ' ms.');
+    }
+  },
+
+
+  // 1. Get image from this.data.
+  // 2. For each pixel in image.
+  // 3. If the pixel value is in this.tiles.
+  // 4. Add that tile at the corresponding position and rotation.
+  constructGeometry: function constructGeometry() {
+    var t0 = performance.now();
+    var tiles = this.tiles;
+
+    var img = this.data.src;
+    var imgWidth = img.naturalWidth;
+    var imgHeight = img.naturalHeight;
+
+    var tileWidth = this.data.tileWidth;
+    var tileHeight = this.data.tileHeight;
+    var tileOffsetX = -tileWidth * imgWidth * this.data.origin.x;
+    var tileOffsetY = -tileHeight * imgHeight * this.data.origin.y;
+
+    var canvas = document.createElement('canvas');
+    var context = canvas.getContext('2d');
+    context.drawImage(img, 0, 0);
+    var data = context.getImageData(0, 0, imgWidth, imgHeight).data;
+
+    this.el.object3D.parent.updateMatrixWorld();
+    var invRootMatrixWorld = new THREE.Matrix4().getInverse(this.el.object3D.matrixWorld);
+
+    var index = 0;
+    for (var row = 0; row < imgHeight; ++row) {
+      for (var col = 0; col < imgWidth; ++col) {
+        // Extract the pixel components used for the tile rasterization.
+        var _data$slice = data.slice(index, index + 4),
+            _data$slice2 = _slicedToArray(_data$slice, 4),
+            r = _data$slice2[0],
+            g = _data$slice2[1],
+            b = _data$slice2[2],
+            a = _data$slice2[3];
+
+        index += 4;
+
+        // Compute the tileId and rotation associated with this tile.
+        var tileId = 256 * r + g;
+        var rotation = _constants.M_TAU_SCALED * b;
+
+        // Retrieve the appropriate tile geometry and merge it into place.
+        if (tileId in tiles) {
+          var x = tileWidth * col + tileOffsetX;
+          var y = tileHeight * row + tileOffsetY;
+          this.addTileGeometry(tileId, x, y, rotation, invRootMatrixWorld);
+        }
+      }
+    }
+
+    // If the debug flag is set, print timing metrics.
+    if (this.data.debug) {
+      var t1 = performance.now();
+      console.log('Tile geometry merging took ' + (t1 - t0).toFixed(2) + ' ms.');
+    }
+  },
+  addTileGeometry: function addTileGeometry(tileId, x, y, theta, invRootMatrixWorld) {
+    var mapGeometriesEntry = this.mapGeometries[tileId];
+    var tileMeshesEntry = this.tileMeshes[tileId];
+
+    // TODO: what is the performance of this?
+    for (var uuid in tileMeshesEntry) {
+      var tileMesh = tileMeshesEntry[uuid];
+      var mapGeometry = mapGeometriesEntry[uuid];
+
+      var matrix = new THREE.Matrix4().makeTranslation(x, y, 0.0);
+      matrix.multiply(new THREE.Matrix4().makeRotationZ(theta));
+      matrix.multiply(invRootMatrixWorld);
+      matrix.multiply(tileMesh.matrixWorld);
+
+      var geometry = tileMesh.geometry;
+      if (geometry instanceof THREE.BufferGeometry) {
+        geometry = new THREE.Geometry().fromBufferGeometry(tileMesh.geometry);
+      }
+      mapGeometry.merge(geometry, matrix);
+    }
+  },
+  constructTiles: function constructTiles() {
+    var t0 = performance.now();
+    var tiles = this.tiles;
+    var tileLoadingPromises = [];
+
+    var mapGeometries = this.mapGeometries = {};
+    var tileMeshes = this.tileMeshes = {};
+
+    var _loop = function _loop(tileId) {
+      var tile = tiles[tileId];
+
+      var tileLoadingPromise = new Promise(function (resolve, reject) {
+        var defineTile = function defineTile() {
+          var tileMeshesEntry = {};
+          var mapGeometriesEntry = {};
+
+          tile.el.object3D.traverse(function (tileMesh) {
+            if (tileMesh.type !== 'Mesh') return;
+
+            var uuid = tileMesh.parent.uuid;
+            tileMesh.parent.updateMatrixWorld();
+            tileMeshesEntry[uuid] = tileMesh;
+
+            var mapGeometry = new THREE.Geometry();
+            mapGeometriesEntry[uuid] = mapGeometry;
+          });
+
+          mapGeometries[tileId] = mapGeometriesEntry;
+          tileMeshes[tileId] = tileMeshesEntry;
+          resolve();
+        };
+
+        if (tile.data.isLoaded) {
+          tile.el.addEventListener('model-loaded', function (e) {
+            // For some reason, there is some additional time for the
+            // transformations in the mesh.matrixWorld to update after the
+            // 'model-loaded' event is emitted.
+            setTimeout(function () {
+              defineTile();
+            }, 100);
+          });
+        } else {
+          defineTile();
+        }
+      });
+
+      tileLoadingPromises.push(tileLoadingPromise);
+    };
+
+    for (var tileId in tiles) {
+      _loop(tileId);
+    }
+
+    // If the debug flag is set, print timing metrics.
+    if (this.data.debug) {
+      var t1 = performance.now();
+      console.log('Tile cache creation took ' + (t1 - t0).toFixed(2) + ' ms.');
+    }
+
+    return Promise.all(tileLoadingPromises);
+  },
+  update: function update(oldData) {
+    // TODO: Regenerate mesh if these properties change.
+  },
+  remove: function remove() {
+    // Do nothing.
+  }
+});
 
 /***/ })
 /******/ ]);
