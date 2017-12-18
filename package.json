@@ -1,0 +1,43 @@
+{
+  "name": "aframe-tilemap",
+  "version": "0.1.0",
+  "description":
+    "Tilemap implementations in A-Frame using object cloning, merging, and instancing",
+  "main": "dist/aframe-tilemap.js",
+  "scripts": {
+    "build": "webpack && webpack -p",
+    "dev": "webpack-dev-server --content-base examples/",
+    "test": "jest",
+    "lint": "eslint .",
+    "prepublish": "npm run dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/psigen/aframe-tilemap.git"
+  },
+  "keywords": [
+    "aframe",
+    "aframe-component",
+    "aframe-vr",
+    "vr",
+    "mozvr",
+    "webvr"
+  ],
+  "author": "Pras Velagapudi <psigen@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/psigen/aframe-tilemap/issues"
+  },
+  "homepage": "https://github.com/psigen/aframe-tilemap",
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-eslint": "^8.0.3",
+    "babel-loader": "^7.1.2",
+    "babel-preset-env": "^1.6.1",
+    "eslint": "^4.13.1",
+    "eslint-loader": "^1.9.0",
+    "jest": "^21.2.1",
+    "webpack": "^3.10.0",
+    "webpack-dev-server": "^2.9.7"
+  }
+}

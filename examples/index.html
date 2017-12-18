@@ -4,10 +4,7 @@
   <head>
     <meta charset="utf-8">
     <title>Tilemap Test • A-Frame</title>
-    <meta name="description" content="A-Frame - Tile Render Test">
-    <script src="https://code.jquery.com/jquery-3.2.1.min.js"
-            integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
-            crossorigin="anonymous"></script>
+    <meta name="description" content="A-Frame - Tilemap Test">
     <script src="//cdnjs.cloudflare.com/ajax/libs/aframe/0.7.1/aframe.js"></script>
     <script src="aframe-tilemap.js"></script>
   </head>
@@ -32,18 +29,18 @@
         gl_Position = projectionMatrix * modelViewMatrix * vec4( tilemapPosition + vPosition, 1.0 );
       }
     </script>
-    <a-scene stats vr-mode-ui="enabled: false">
+    <a-scene stats>
       <a-assets>
-        <a-asset-item id="milkTruck" src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMilkTruck/glTF-Embedded/CesiumMilkTruck.gltf"></a-asset-item>
-        <img id="tilemap-image" src="tilemap-128px.png">
+        <a-asset-item id="milkTruck" src="assets/CesiumMilkTruck.glb"></a-asset-item>
+        <img id="tilemap-image" src="maps/tilemap-128px.png">
       </a-assets>
       <a-entity light="type: ambient; color: #BBB"></a-entity>
       <a-entity light="type: directional; color: #FFF; intensity: 0.6" position="-0.5 1 1"></a-entity>
 
 
-      <a-entity instanced-tilemap="src: #tilemap-image" position="0 0 -20">
+      <a-entity tilemap-instanced="src: #tilemap-image" position="0 0 -20">
         <a-entity tile="id: 1" geometry="primitive: box; buffer: false" visible="false" scale="1 1 3"></a-entity>
-        <a-entity tile="id: 2; isLoaded: true" gltf-model="#milkTruck" scale="0.5 0.5 0.5"></a-entity>
+        <a-entity tile="id: 2; isLoaded: true" gltf-model="#milkTruck" visible="false" scale="0.5 0.5 0.5"></a-entity>
         <a-entity tile="id: 3" geometry="primitive: sphere; buffer: false" visible="false"></a-entity>
       </a-entity>
       <!--
@@ -61,7 +58,8 @@
         <a-entity tile="id: 1" geometry="primitive: box; buffer: false" visible="false" scale="1 1 3"></a-entity>
         <a-entity tile="id: 2; isLoaded: true" gltf-model="#milkTruck" scale="0.5 0.5 0.5"></a-entity>
         <a-entity tile="id: 3" geometry="primitive: sphere; buffer: false" visible="false"></a-entity>
-      </a-entity>-->
+      </a-entity>
+      -->
       <a-sky color="#333"></a-sky>
     </a-scene>
   </body>
