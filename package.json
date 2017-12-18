@@ -5,8 +5,8 @@
     "Tilemap implementations in A-Frame using object cloning, merging, and instancing",
   "main": "dist/aframe-tilemap.js",
   "scripts": {
-    "build": "webpack",
-    "dist": "webpack -p",
+    "build": "webpack && webpack -p",
+    "dev": "webpack-dev-server --content-base examples/",
     "test": "jest",
     "lint": "eslint .",
     "prepublish": "npm run dist"
@@ -37,6 +37,7 @@
     "eslint": "^4.13.1",
     "eslint-loader": "^1.9.0",
     "jest": "^21.2.1",
-    "webpack": "^3.10.0"
+    "webpack": "^3.10.0",
+    "webpack-dev-server": "^2.9.7"
   }
 }
