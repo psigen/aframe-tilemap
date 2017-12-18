@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import AFRAME from 'aframe';
-import updateUniforms from './conversions';
+import { updateUniforms } from './conversions';
 
 const SHADERLIB_MATERIALS = {
   MeshBasicMaterial: THREE.ShaderLib.basic,

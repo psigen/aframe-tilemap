@@ -1,16 +1,18 @@
 // webpack.config.js
-import webpack from 'webpack';
-import path from 'path';
+const webpack = require('webpack');
+const path = require('path');
 
-const library = 'aframeTilemap';
-const filename = 'aframe-tilemap.js';
+// Detect if the builtin webpack -p flag is in use.
+const minimize =
+  process.argv.indexOf('--optimize-minimize') !== -1 ||
+  process.argv.indexOf('-p') !== -1;
 
-const config = {
+module.exports = {
   entry: __dirname + '/src/index.js',
   output: {
-    path: __dirname + '/lib',
-    filename,
-    library,
+    path: __dirname + '/dist',
+    filename: minimize ? 'aframe-tilemap.min.js' : 'aframe-tilemap.js',
+    library: 'aframeTilemap',
     libraryTarget: 'umd',
     umdNamedDefine: true,
   },
@@ -18,7 +20,7 @@ const config = {
     loaders: [
       {
         test: /(\.jsx|\.js)$/,
-        loader: 'babel',
+        loader: 'babel-loader',
         exclude: /(node_modules|bower_components)/,
       },
       {
@@ -28,18 +30,8 @@ const config = {
       },
     ],
   },
-  resolve: {
-    root: path.resolve('./src'),
-    extensions: ['', '.js'],
-  },
   externals: {
-    three: {
-      root: 'THREE',
-    },
-    aframe: {
-      root: 'AFRAME',
-    },
+    three: 'THREE',
+    aframe: 'AFRAME',
   },
 };
-
-export default config;
