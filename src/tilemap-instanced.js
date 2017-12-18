@@ -31,10 +31,14 @@ AFRAME.registerComponent('tilemap-instanced', {
 
     // TODO: add event handler for new children.
     // Construct tilemap after a number of pre-processing steps.
-    this.constructTiles().then(() => {
-      this.constructInstances();
-      this.constructMeshes();
-    });
+    this.constructTiles()
+      .then(() => {
+        this.constructInstances();
+        this.constructMeshes();
+      })
+      .then(() => {
+        this.el.emit('model-loaded');
+      });
   },
 
   // Take all map geometry and add it as meshes to the scene.
@@ -202,8 +206,9 @@ AFRAME.registerComponent('tilemap-instanced', {
           resolve();
         };
 
-        if (tile.entity.data.isLoaded) {
-          tile.entity.el.addEventListener('model-loaded', e => {
+        const readyEvent = tile.entity.data.readyEvent;
+        if (readyEvent) {
+          tile.entity.el.addEventListener(readyEvent, e => {
             // For some reason, there is some additional time for the
             // transformations in the mesh.matrixWorld to update after the
             // 'model-loaded' event is emitted.

@@ -20,12 +20,13 @@ AFRAME.registerComponent('tilemap-cloned', {
     for (const child of el.children) {
       const tile = child.components.tile;
       if (tile) {
-        tiles[tile.data] = tile;
+        tiles[tile.data.id] = tile;
       }
     }
 
     // TODO: add event handler for new children.
     this.constructClones();
+    this.el.emit('model-loaded');
   },
 
   constructClones: function() {

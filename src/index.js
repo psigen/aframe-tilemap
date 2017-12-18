@@ -8,6 +8,6 @@ import './tilemap-merged';
 AFRAME.registerComponent('tile', {
   schema: {
     id: { type: 'int' },
-    isLoaded: { type: 'boolean', default: false },
+    readyEvent: { type: 'string', default: '' },
   },
 });
