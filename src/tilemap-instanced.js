@@ -4,6 +4,27 @@ import AFRAME from 'aframe';
 import { updateUniforms } from './conversions';
 import { SHADERLIB_MATERIALS, M_TAU_SCALED, Z_AXIS } from './constants';
 
+const INSTANCED_VERTEX_SHADER = `
+precision highp float;
+
+attribute vec3 tilemapOffset;
+
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vViewPosition;
+
+void main() {
+  vec4 tilemapOrientation = vec4(0, 0, cos(tilemapOffset.z), sin(tilemapOffset.z));
+  vec3 tilemapPosition = vec3(tilemapOffset.xy, 0.0);
+
+  vec3 vPosition = position;
+  vec3 vcV = cross( tilemapOrientation.xyz, vPosition );
+  vPosition = vcV * ( 2.0 * tilemapOrientation.w ) + ( cross( tilemapOrientation.xyz, vcV ) * 2.0 + vPosition );
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4( tilemapPosition + vPosition, 1.0 );
+}
+`;
+
 AFRAME.registerComponent('tilemap-instanced', {
   schema: {
     src: { type: 'asset' },
@@ -74,7 +95,7 @@ AFRAME.registerComponent('tilemap-instanced', {
         const instanceMaterial = new THREE.ShaderMaterial({
           uniforms,
           //vertexShader: shader.vertexShader, // document.getElementById('vertexShader').textContent,
-          vertexShader: document.getElementById('vertexShader').textContent,
+          vertexShader: INSTANCED_VERTEX_SHADER,
           fragmentShader: shader.fragmentShader,
           lights: meshMaterial.lights,
           defines: {
