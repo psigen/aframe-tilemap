@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import AFRAME from 'aframe';
 
+import { waitUntilLoaded } from './utils';
 import { M_TAU_SCALED } from './constants';
 
 AFRAME.registerComponent('tilemap-merged', {
@@ -155,40 +156,23 @@ AFRAME.registerComponent('tilemap-merged', {
     for (const tileId in tiles) {
       const tile = tiles[tileId];
 
-      const tileLoadingPromise = new Promise((resolve, reject) => {
-        const defineTile = () => {
-          const tileMeshesEntry = {};
-          const mapGeometriesEntry = {};
+      const tileLoadingPromise = waitUntilLoaded(tile).then(() => {
+        const tileMeshesEntry = {};
+        const mapGeometriesEntry = {};
 
-          tile.el.object3D.traverse(tileMesh => {
-            if (tileMesh.type !== 'Mesh') return;
+        tile.el.object3D.traverse(tileMesh => {
+          if (tileMesh.type !== 'Mesh') return;
 
-            const uuid = tileMesh.parent.uuid;
-            tileMesh.parent.updateMatrixWorld();
-            tileMeshesEntry[uuid] = tileMesh;
+          const uuid = tileMesh.parent.uuid;
+          tileMesh.parent.updateMatrixWorld();
+          tileMeshesEntry[uuid] = tileMesh;
 
-            const mapGeometry = new THREE.Geometry();
-            mapGeometriesEntry[uuid] = mapGeometry;
-          });
+          const mapGeometry = new THREE.Geometry();
+          mapGeometriesEntry[uuid] = mapGeometry;
+        });
 
-          mapGeometries[tileId] = mapGeometriesEntry;
-          tileMeshes[tileId] = tileMeshesEntry;
-          resolve();
-        };
-
-        const readyEvent = tile.data.readyEvent;
-        if (readyEvent) {
-          tile.el.addEventListener(readyEvent, e => {
-            // For some reason, there is some additional time for the
-            // transformations in the mesh.matrixWorld to update after the
-            // 'model-loaded' event is emitted.
-            setTimeout(() => {
-              defineTile();
-            }, 100);
-          });
-        } else {
-          defineTile();
-        }
+        mapGeometries[tileId] = mapGeometriesEntry;
+        tileMeshes[tileId] = tileMeshesEntry;
       });
 
       tileLoadingPromises.push(tileLoadingPromise);
