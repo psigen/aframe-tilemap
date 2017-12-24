@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import AFRAME from 'aframe';
 
 import { updateUniforms } from './conversions';
+import { waitUntilLoaded } from './utils';
 import { SHADERLIB_MATERIALS, M_TAU_SCALED, Z_AXIS } from './constants';
 
 const INSTANCED_VERTEX_SHADER = `
@@ -205,41 +206,23 @@ AFRAME.registerComponent('tilemap-instanced', {
       const tile = tiles[tileId];
       const meshes = tile.meshes;
 
-      const tileLoadingPromise = new Promise((resolve, reject) => {
-        const defineTile = () => {
-          tile.entity.el.object3D.traverse(mesh => {
-            if (mesh.type !== 'Mesh') return;
+      const tileLoadingPromise = waitUntilLoaded(tile.entity).then(() => {
+        tile.entity.el.object3D.traverse(mesh => {
+          if (mesh.type !== 'Mesh') return;
 
-            const geometry =
-              mesh.geometry instanceof THREE.BufferGeometry
-                ? new THREE.BufferGeometry().copy(mesh.geometry)
-                : new THREE.BufferGeometry().fromGeometry(mesh.geometry);
+          const geometry =
+            mesh.geometry instanceof THREE.BufferGeometry
+              ? new THREE.BufferGeometry().copy(mesh.geometry)
+              : new THREE.BufferGeometry().fromGeometry(mesh.geometry);
 
-            mesh.updateMatrixWorld();
-            const matrix = new THREE.Matrix4()
-              .copy(invMatrixWorld)
-              .multiply(mesh.matrixWorld);
-            geometry.applyMatrix(matrix);
+          mesh.updateMatrixWorld();
+          const matrix = new THREE.Matrix4()
+            .copy(invMatrixWorld)
+            .multiply(mesh.matrixWorld);
+          geometry.applyMatrix(matrix);
 
-            meshes[mesh.uuid] = { mesh, geometry };
-          });
-
-          resolve();
-        };
-
-        const readyEvent = tile.entity.data.readyEvent;
-        if (readyEvent) {
-          tile.entity.el.addEventListener(readyEvent, e => {
-            // For some reason, there is some additional time for the
-            // transformations in the mesh.matrixWorld to update after the
-            // 'model-loaded' event is emitted.
-            setTimeout(() => {
-              defineTile();
-            }, 100);
-          });
-        } else {
-          defineTile();
-        }
+          meshes[mesh.uuid] = { mesh, geometry };
+        });
       });
 
       tileLoadingPromises.push(tileLoadingPromise);
