@@ -1,6 +1,6 @@
 {
   "name": "aframe-tilemap",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description":
     "Tilemap implementations in A-Frame using object cloning, merging, and instancing",
   "main": "dist/aframe-tilemap.js",
@@ -9,7 +9,7 @@
     "dev": "webpack-dev-server --content-base examples/",
     "test": "jest",
     "lint": "eslint .",
-    "prepublish": "npm run dist"
+    "prepublish": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -29,6 +29,9 @@
     "url": "https://github.com/psigen/aframe-tilemap/issues"
   },
   "homepage": "https://github.com/psigen/aframe-tilemap",
+  "peerDependencies": {
+    "aframe": ">=0.5.0"
+  },
   "devDependencies": {
     "babel-core": "^6.26.0",
     "babel-eslint": "^8.0.3",

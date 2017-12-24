@@ -70,7 +70,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 3);
+/******/ 	return __webpack_require__(__webpack_require__.s = 4);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -95,12 +95,32 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_1__;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var SHADERLIB_MATERIALS = exports.SHADERLIB_MATERIALS = {
-  MeshBasicMaterial: THREE.ShaderLib.basic,
-  MeshStandardMaterial: THREE.ShaderLib.standard
+exports.waitUntilLoaded = waitUntilLoaded;
+var timeout = function timeout(ms) {
+  return new Promise(function (res) {
+    return setTimeout(res, ms);
+  });
 };
-var M_TAU_SCALED = exports.M_TAU_SCALED = 2.0 * Math.PI / 256.0;
-var Z_AXIS = exports.Z_AXIS = new THREE.Vector3(0, 0, 1);
+
+function waitUntilLoaded(entity) {
+  // Is this entity going to take time to load (is the readyEvent attribute
+  // defined according to our spec)?
+  var readyEvent = entity.data.readyEvent;
+  if (!readyEvent) return Promise.resolve();
+
+  // If the entity will take time to load, listen for the ready event and
+  // resolve when it is called.
+  return new Promise(function (resolve, reject) {
+    entity.el.addEventListener(readyEvent, function (e) {
+      // For some reason, there is some additional time for the
+      // transformations in the mesh.matrixWorld to update after the
+      // 'model-loaded' event is emitted.
+      setTimeout(function () {
+        resolve();
+      }, 100);
+    });
+  });
+}
 
 /***/ }),
 /* 3 */
@@ -109,11 +129,28 @@ var Z_AXIS = exports.Z_AXIS = new THREE.Vector3(0, 0, 1);
 "use strict";
 
 
-__webpack_require__(4);
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+var SHADERLIB_MATERIALS = exports.SHADERLIB_MATERIALS = {
+  MeshBasicMaterial: THREE.ShaderLib.basic,
+  MeshStandardMaterial: THREE.ShaderLib.standard
+};
+var M_TAU_SCALED = exports.M_TAU_SCALED = 2.0 * Math.PI / 256.0;
+var Z_AXIS = exports.Z_AXIS = new THREE.Vector3(0, 0, 1);
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
 
 __webpack_require__(5);
 
-__webpack_require__(7);
+__webpack_require__(6);
+
+__webpack_require__(8);
 
 // The tile component is a placeholder used to identify which <a-entity>
 // will be merged to construct the tile element of the given value.
@@ -121,12 +158,12 @@ __webpack_require__(7);
 AFRAME.registerComponent('tile', {
   schema: {
     id: { type: 'int' },
-    isLoaded: { type: 'boolean', default: false }
+    readyEvent: { type: 'string', default: '' }
   }
 });
 
 /***/ }),
-/* 4 */
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -142,7 +179,9 @@ var _aframe = __webpack_require__(1);
 
 var _aframe2 = _interopRequireDefault(_aframe);
 
-var _constants = __webpack_require__(2);
+var _utils = __webpack_require__(2);
+
+var _constants = __webpack_require__(3);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -151,15 +190,18 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 _aframe2.default.registerComponent('tilemap-cloned', {
   schema: {
     src: { type: 'asset' },
-    tileWidth: { type: 'number', default: 10 },
-    tileHeight: { type: 'number', default: 10 },
+    tileWidth: { type: 'number', default: 1 },
+    tileHeight: { type: 'number', default: 1 },
     origin: { type: 'vec2', default: { x: 0.5, y: 0.5 } },
     debug: { type: 'boolean', default: true }
   },
 
   init: function init() {
+    var _this = this;
+
     var el = this.el;
     var tiles = this.tiles = {};
+    var tileLoadingPromises = [];
 
     // Record all current tile children of this component.
     var _iteratorNormalCompletion = true;
@@ -172,7 +214,8 @@ _aframe2.default.registerComponent('tilemap-cloned', {
 
         var tile = child.components.tile;
         if (tile) {
-          tiles[tile.data] = tile;
+          tiles[tile.data.id] = tile;
+          tileLoadingPromises.push((0, _utils.waitUntilLoaded)(tile));
         }
       }
 
@@ -192,7 +235,10 @@ _aframe2.default.registerComponent('tilemap-cloned', {
       }
     }
 
-    this.constructClones();
+    Promise.all(tileLoadingPromises).then(function () {
+      _this.constructClones();
+      _this.el.emit('model-loaded');
+    });
   },
 
   constructClones: function constructClones() {
@@ -255,7 +301,7 @@ _aframe2.default.registerComponent('tilemap-cloned', {
 });
 
 /***/ }),
-/* 5 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -271,19 +317,23 @@ var _aframe = __webpack_require__(1);
 
 var _aframe2 = _interopRequireDefault(_aframe);
 
-var _conversions = __webpack_require__(6);
+var _conversions = __webpack_require__(7);
 
-var _constants = __webpack_require__(2);
+var _utils = __webpack_require__(2);
+
+var _constants = __webpack_require__(3);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
+var INSTANCED_VERTEX_SHADER = '\nprecision highp float;\n\nattribute vec3 tilemapOffset;\n\nvarying vec2 vUv;\nvarying vec3 vNormal;\nvarying vec3 vViewPosition;\n\nvoid main() {\n  vec4 tilemapOrientation = vec4(0, 0, cos(tilemapOffset.z), sin(tilemapOffset.z));\n  vec3 tilemapPosition = vec3(tilemapOffset.xy, 0.0);\n\n  vec3 vPosition = position;\n  vec3 vcV = cross( tilemapOrientation.xyz, vPosition );\n  vPosition = vcV * ( 2.0 * tilemapOrientation.w ) + ( cross( tilemapOrientation.xyz, vcV ) * 2.0 + vPosition );\n  vUv = uv;\n  gl_Position = projectionMatrix * modelViewMatrix * vec4( tilemapPosition + vPosition, 1.0 );\n}\n';
+
 _aframe2.default.registerComponent('tilemap-instanced', {
   schema: {
     src: { type: 'asset' },
-    tileWidth: { type: 'number', default: 2 },
-    tileHeight: { type: 'number', default: 2 },
+    tileWidth: { type: 'number', default: 1 },
+    tileHeight: { type: 'number', default: 1 },
     origin: { type: 'vec2', default: { x: 0.5, y: 0.5 } },
     debug: { type: 'boolean', default: true }
   },
@@ -333,6 +383,8 @@ _aframe2.default.registerComponent('tilemap-instanced', {
     this.constructTiles().then(function () {
       _this.constructInstances();
       _this.constructMeshes();
+    }).then(function () {
+      _this.el.emit('model-loaded');
     });
   },
 
@@ -360,14 +412,10 @@ _aframe2.default.registerComponent('tilemap-instanced', {
         var uniforms = THREE.UniformsUtils.clone(shader.uniforms);
         (0, _conversions.updateUniforms)(uniforms, meshMaterial);
 
-        //console.log(uuid);
-        //console.log(meshMaterial);
-        //console.log(uniforms);
-
         var instanceMaterial = new THREE.ShaderMaterial({
           uniforms: uniforms,
           //vertexShader: shader.vertexShader, // document.getElementById('vertexShader').textContent,
-          vertexShader: document.getElementById('vertexShader').textContent,
+          vertexShader: INSTANCED_VERTEX_SHADER,
           fragmentShader: shader.fragmentShader,
           lights: meshMaterial.lights,
           defines: {
@@ -478,35 +526,18 @@ _aframe2.default.registerComponent('tilemap-instanced', {
       var tile = tiles[tileId];
       var meshes = tile.meshes;
 
-      var tileLoadingPromise = new Promise(function (resolve, reject) {
-        var defineTile = function defineTile() {
-          tile.entity.el.object3D.traverse(function (mesh) {
-            if (mesh.type !== 'Mesh') return;
+      var tileLoadingPromise = (0, _utils.waitUntilLoaded)(tile.entity).then(function () {
+        tile.entity.el.object3D.traverse(function (mesh) {
+          if (mesh.type !== 'Mesh') return;
 
-            var geometry = mesh.geometry instanceof THREE.BufferGeometry ? new THREE.BufferGeometry().copy(mesh.geometry) : new THREE.BufferGeometry().fromGeometry(mesh.geometry);
+          var geometry = mesh.geometry instanceof THREE.BufferGeometry ? new THREE.BufferGeometry().copy(mesh.geometry) : new THREE.BufferGeometry().fromGeometry(mesh.geometry);
 
-            mesh.updateMatrixWorld();
-            var matrix = new THREE.Matrix4().copy(invMatrixWorld).multiply(mesh.matrixWorld);
-            geometry.applyMatrix(matrix);
+          mesh.updateMatrixWorld();
+          var matrix = new THREE.Matrix4().copy(invMatrixWorld).multiply(mesh.matrixWorld);
+          geometry.applyMatrix(matrix);
 
-            meshes[mesh.uuid] = { mesh: mesh, geometry: geometry };
-          });
-
-          resolve();
-        };
-
-        if (tile.entity.data.isLoaded) {
-          tile.entity.el.addEventListener('model-loaded', function (e) {
-            // For some reason, there is some additional time for the
-            // transformations in the mesh.matrixWorld to update after the
-            // 'model-loaded' event is emitted.
-            setTimeout(function () {
-              defineTile();
-            }, 100);
-          });
-        } else {
-          defineTile();
-        }
+          meshes[mesh.uuid] = { mesh: mesh, geometry: geometry };
+        });
       });
 
       tileLoadingPromises.push(tileLoadingPromise);
@@ -533,7 +564,7 @@ _aframe2.default.registerComponent('tilemap-instanced', {
 });
 
 /***/ }),
-/* 6 */
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -861,7 +892,7 @@ function updateUniforms(m_uniforms, material) {
 }
 
 /***/ }),
-/* 7 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -877,7 +908,9 @@ var _aframe = __webpack_require__(1);
 
 var _aframe2 = _interopRequireDefault(_aframe);
 
-var _constants = __webpack_require__(2);
+var _utils = __webpack_require__(2);
+
+var _constants = __webpack_require__(3);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -886,8 +919,8 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 _aframe2.default.registerComponent('tilemap-merged', {
   schema: {
     src: { type: 'asset' },
-    tileWidth: { type: 'number', default: 2 },
-    tileHeight: { type: 'number', default: 2 },
+    tileWidth: { type: 'number', default: 1 },
+    tileHeight: { type: 'number', default: 1 },
     origin: { type: 'vec2', default: { x: 0.5, y: 0.5 } },
     debug: { type: 'boolean', default: true }
   },
@@ -909,7 +942,11 @@ _aframe2.default.registerComponent('tilemap-merged', {
 
         var tile = child.components.tile;
         if (tile) {
-          tiles[tile.data.id] = tile;
+          tiles[tile.data.id] = {
+            entity: tile,
+            meshes: {},
+            geometries: {}
+          };
         }
       }
 
@@ -933,6 +970,8 @@ _aframe2.default.registerComponent('tilemap-merged', {
     this.constructTiles().then(function () {
       _this.constructGeometry();
       _this.constructMeshes();
+    }).then(function () {
+      _this.el.emit('model-loaded');
     });
   },
 
@@ -940,26 +979,20 @@ _aframe2.default.registerComponent('tilemap-merged', {
   // Take all map geometry and add it as meshes to the scene.
   constructMeshes: function constructMeshes() {
     var t0 = performance.now();
+    var tiles = this.tiles;
 
-    var tileMeshes = this.tileMeshes;
-    var mapMeshes = this.mapMeshes = {};
-    var mapGeometries = this.mapGeometries;
+    for (var tileId in tiles) {
+      var tile = tiles[tileId];
+      var meshes = tile.meshes;
 
-    for (var tileId in tileMeshes) {
-      var tileMeshesEntry = tileMeshes[tileId];
-      var mapGeometriesEntry = mapGeometries[tileId];
-      var mapMeshesEntry = {};
+      for (var uuid in meshes) {
+        var _meshes$uuid = meshes[uuid],
+            mesh = _meshes$uuid.mesh,
+            mergedGeometry = _meshes$uuid.mergedGeometry;
 
-      for (var uuid in mapGeometriesEntry) {
-        var mapGeometry = mapGeometriesEntry[uuid];
-        var tileMesh = tileMeshesEntry[uuid];
-
-        var mapMesh = new THREE.Mesh(mapGeometry, tileMesh.material);
-        this.el.object3D.add(mapMesh);
-        mapMeshesEntry[uuid] = mapMesh;
+        var mergedMesh = new THREE.Mesh(mergedGeometry, mesh.material);
+        this.el.object3D.add(mergedMesh);
       }
-
-      mapMeshes[tileId] = mapMeshesEntry;
     }
 
     // If the debug flag is set, print timing metrics.
@@ -1028,24 +1061,25 @@ _aframe2.default.registerComponent('tilemap-merged', {
     }
   },
   addTileGeometry: function addTileGeometry(tileId, x, y, theta, invRootMatrixWorld) {
-    var mapGeometriesEntry = this.mapGeometries[tileId];
-    var tileMeshesEntry = this.tileMeshes[tileId];
+    var meshes = this.tiles[tileId].meshes;
 
     // TODO: what is the performance of this?
-    for (var uuid in tileMeshesEntry) {
-      var tileMesh = tileMeshesEntry[uuid];
-      var mapGeometry = mapGeometriesEntry[uuid];
+    for (var uuid in meshes) {
+      var _meshes$uuid2 = meshes[uuid],
+          mesh = _meshes$uuid2.mesh,
+          mergedGeometry = _meshes$uuid2.mergedGeometry;
+
 
       var matrix = new THREE.Matrix4().makeTranslation(x, y, 0.0);
       matrix.multiply(new THREE.Matrix4().makeRotationZ(theta));
       matrix.multiply(invRootMatrixWorld);
-      matrix.multiply(tileMesh.matrixWorld);
+      matrix.multiply(mesh.matrixWorld);
 
-      var geometry = tileMesh.geometry;
+      var geometry = mesh.geometry;
       if (geometry instanceof THREE.BufferGeometry) {
-        geometry = new THREE.Geometry().fromBufferGeometry(tileMesh.geometry);
+        geometry = new THREE.Geometry().fromBufferGeometry(mesh.geometry);
       }
-      mapGeometry.merge(geometry, matrix);
+      mergedGeometry.merge(geometry, matrix);
     }
   },
   constructTiles: function constructTiles() {
@@ -1053,45 +1087,19 @@ _aframe2.default.registerComponent('tilemap-merged', {
     var tiles = this.tiles;
     var tileLoadingPromises = [];
 
-    var mapGeometries = this.mapGeometries = {};
-    var tileMeshes = this.tileMeshes = {};
-
     var _loop = function _loop(tileId) {
       var tile = tiles[tileId];
+      var entity = tile.entity;
+      var meshes = tile.meshes;
 
-      var tileLoadingPromise = new Promise(function (resolve, reject) {
-        var defineTile = function defineTile() {
-          var tileMeshesEntry = {};
-          var mapGeometriesEntry = {};
+      var tileLoadingPromise = (0, _utils.waitUntilLoaded)(entity).then(function () {
+        entity.el.object3D.traverse(function (mesh) {
+          if (mesh.type !== 'Mesh') return;
 
-          tile.el.object3D.traverse(function (tileMesh) {
-            if (tileMesh.type !== 'Mesh') return;
-
-            var uuid = tileMesh.parent.uuid;
-            tileMesh.parent.updateMatrixWorld();
-            tileMeshesEntry[uuid] = tileMesh;
-
-            var mapGeometry = new THREE.Geometry();
-            mapGeometriesEntry[uuid] = mapGeometry;
-          });
-
-          mapGeometries[tileId] = mapGeometriesEntry;
-          tileMeshes[tileId] = tileMeshesEntry;
-          resolve();
-        };
-
-        if (tile.data.isLoaded) {
-          tile.el.addEventListener('model-loaded', function (e) {
-            // For some reason, there is some additional time for the
-            // transformations in the mesh.matrixWorld to update after the
-            // 'model-loaded' event is emitted.
-            setTimeout(function () {
-              defineTile();
-            }, 100);
-          });
-        } else {
-          defineTile();
-        }
+          mesh.updateMatrixWorld();
+          var mergedGeometry = new THREE.Geometry();
+          meshes[mesh.uuid] = { mesh: mesh, mergedGeometry: mergedGeometry };
+        });
       });
 
       tileLoadingPromises.push(tileLoadingPromise);
