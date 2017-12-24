@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import AFRAME from 'aframe';
 
+import { waitUntilLoaded } from './utils';
 import { M_TAU_SCALED } from './constants';
 
 AFRAME.registerComponent('tilemap-cloned', {
   schema: {
     src: { type: 'asset' },
-    tileWidth: { type: 'number', default: 10 },
-    tileHeight: { type: 'number', default: 10 },
+    tileWidth: { type: 'number', default: 1 },
+    tileHeight: { type: 'number', default: 1 },
     origin: { type: 'vec2', default: { x: 0.5, y: 0.5 } },
     debug: { type: 'boolean', default: true },
   },
@@ -15,18 +16,22 @@ AFRAME.registerComponent('tilemap-cloned', {
   init: function() {
     const el = this.el;
     const tiles = (this.tiles = {});
+    const tileLoadingPromises = [];
 
     // Record all current tile children of this component.
     for (const child of el.children) {
       const tile = child.components.tile;
       if (tile) {
         tiles[tile.data.id] = tile;
+        tileLoadingPromises.push(waitUntilLoaded(tile));
       }
     }
 
     // TODO: add event handler for new children.
-    this.constructClones();
-    this.el.emit('model-loaded');
+    Promise.all(tileLoadingPromises).then(() => {
+      this.constructClones();
+      this.el.emit('model-loaded');
+    });
   },
 
   constructClones: function() {

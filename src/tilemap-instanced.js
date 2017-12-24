@@ -29,8 +29,8 @@ void main() {
 AFRAME.registerComponent('tilemap-instanced', {
   schema: {
     src: { type: 'asset' },
-    tileWidth: { type: 'number', default: 2 },
-    tileHeight: { type: 'number', default: 2 },
+    tileWidth: { type: 'number', default: 1 },
+    tileHeight: { type: 'number', default: 1 },
     origin: { type: 'vec2', default: { x: 0.5, y: 0.5 } },
     debug: { type: 'boolean', default: true },
   },
@@ -88,10 +88,6 @@ AFRAME.registerComponent('tilemap-instanced', {
         const shader = SHADERLIB_MATERIALS[meshMaterial.type];
         const uniforms = THREE.UniformsUtils.clone(shader.uniforms);
         updateUniforms(uniforms, meshMaterial);
-
-        //console.log(uuid);
-        //console.log(meshMaterial);
-        //console.log(uniforms);
 
         const instanceMaterial = new THREE.ShaderMaterial({
           uniforms,
