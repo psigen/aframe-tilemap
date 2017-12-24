@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import AFRAME from 'aframe';
 
+import { waitUntilLoaded } from './utils';
 import { M_TAU_SCALED } from './constants';
 
 AFRAME.registerComponent('tilemap-merged', {
   schema: {
     src: { type: 'asset' },
-    tileWidth: { type: 'number', default: 2 },
-    tileHeight: { type: 'number', default: 2 },
+    tileWidth: { type: 'number', default: 1 },
+    tileHeight: { type: 'number', default: 1 },
     origin: { type: 'vec2', default: { x: 0.5, y: 0.5 } },
     debug: { type: 'boolean', default: true },
   },
@@ -20,7 +21,11 @@ AFRAME.registerComponent('tilemap-merged', {
     for (const child of el.children) {
       const tile = child.components.tile;
       if (tile) {
-        tiles[tile.data.id] = tile;
+        tiles[tile.data.id] = {
+          entity: tile,
+          meshes: {},
+          geometries: {},
+        };
       }
     }
 
@@ -39,26 +44,17 @@ AFRAME.registerComponent('tilemap-merged', {
   // Take all map geometry and add it as meshes to the scene.
   constructMeshes() {
     const t0 = performance.now();
+    const tiles = this.tiles;
 
-    const tileMeshes = this.tileMeshes;
-    const mapMeshes = (this.mapMeshes = {});
-    const mapGeometries = this.mapGeometries;
+    for (const tileId in tiles) {
+      const tile = tiles[tileId];
+      const meshes = tile.meshes;
 
-    for (const tileId in tileMeshes) {
-      const tileMeshesEntry = tileMeshes[tileId];
-      const mapGeometriesEntry = mapGeometries[tileId];
-      const mapMeshesEntry = {};
-
-      for (const uuid in mapGeometriesEntry) {
-        const mapGeometry = mapGeometriesEntry[uuid];
-        const tileMesh = tileMeshesEntry[uuid];
-
-        const mapMesh = new THREE.Mesh(mapGeometry, tileMesh.material);
-        this.el.object3D.add(mapMesh);
-        mapMeshesEntry[uuid] = mapMesh;
+      for (const uuid in meshes) {
+        const { mesh, mergedGeometry } = meshes[uuid];
+        const mergedMesh = new THREE.Mesh(mergedGeometry, mesh.material);
+        this.el.object3D.add(mergedMesh);
       }
-
-      mapMeshes[tileId] = mapMeshesEntry;
     }
 
     // If the debug flag is set, print timing metrics.
@@ -123,24 +119,22 @@ AFRAME.registerComponent('tilemap-merged', {
   },
 
   addTileGeometry(tileId, x, y, theta, invRootMatrixWorld) {
-    const mapGeometriesEntry = this.mapGeometries[tileId];
-    const tileMeshesEntry = this.tileMeshes[tileId];
+    const meshes = this.tiles[tileId].meshes;
 
     // TODO: what is the performance of this?
-    for (const uuid in tileMeshesEntry) {
-      const tileMesh = tileMeshesEntry[uuid];
-      const mapGeometry = mapGeometriesEntry[uuid];
+    for (const uuid in meshes) {
+      const { mesh, mergedGeometry } = meshes[uuid];
 
       const matrix = new THREE.Matrix4().makeTranslation(x, y, 0.0);
       matrix.multiply(new THREE.Matrix4().makeRotationZ(theta));
       matrix.multiply(invRootMatrixWorld);
-      matrix.multiply(tileMesh.matrixWorld);
+      matrix.multiply(mesh.matrixWorld);
 
-      let geometry = tileMesh.geometry;
+      let geometry = mesh.geometry;
       if (geometry instanceof THREE.BufferGeometry) {
-        geometry = new THREE.Geometry().fromBufferGeometry(tileMesh.geometry);
+        geometry = new THREE.Geometry().fromBufferGeometry(mesh.geometry);
       }
-      mapGeometry.merge(geometry, matrix);
+      mergedGeometry.merge(geometry, matrix);
     }
   },
 
@@ -149,46 +143,19 @@ AFRAME.registerComponent('tilemap-merged', {
     const tiles = this.tiles;
     const tileLoadingPromises = [];
 
-    const mapGeometries = (this.mapGeometries = {});
-    const tileMeshes = (this.tileMeshes = {});
-
     for (const tileId in tiles) {
       const tile = tiles[tileId];
+      const entity = tile.entity;
+      const meshes = tile.meshes;
 
-      const tileLoadingPromise = new Promise((resolve, reject) => {
-        const defineTile = () => {
-          const tileMeshesEntry = {};
-          const mapGeometriesEntry = {};
+      const tileLoadingPromise = waitUntilLoaded(entity).then(() => {
+        entity.el.object3D.traverse(mesh => {
+          if (mesh.type !== 'Mesh') return;
 
-          tile.el.object3D.traverse(tileMesh => {
-            if (tileMesh.type !== 'Mesh') return;
-
-            const uuid = tileMesh.parent.uuid;
-            tileMesh.parent.updateMatrixWorld();
-            tileMeshesEntry[uuid] = tileMesh;
-
-            const mapGeometry = new THREE.Geometry();
-            mapGeometriesEntry[uuid] = mapGeometry;
-          });
-
-          mapGeometries[tileId] = mapGeometriesEntry;
-          tileMeshes[tileId] = tileMeshesEntry;
-          resolve();
-        };
-
-        const readyEvent = tile.data.readyEvent;
-        if (readyEvent) {
-          tile.el.addEventListener(readyEvent, e => {
-            // For some reason, there is some additional time for the
-            // transformations in the mesh.matrixWorld to update after the
-            // 'model-loaded' event is emitted.
-            setTimeout(() => {
-              defineTile();
-            }, 100);
-          });
-        } else {
-          defineTile();
-        }
+          mesh.updateMatrixWorld();
+          const mergedGeometry = new THREE.Geometry();
+          meshes[mesh.uuid] = { mesh, mergedGeometry };
+        });
       });
 
       tileLoadingPromises.push(tileLoadingPromise);
