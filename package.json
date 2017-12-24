@@ -1,6 +1,6 @@
 {
   "name": "aframe-tilemap",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description":
     "Tilemap implementations in A-Frame using object cloning, merging, and instancing",
   "main": "dist/aframe-tilemap.js",
