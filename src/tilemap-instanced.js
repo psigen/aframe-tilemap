@@ -32,7 +32,7 @@ AFRAME.registerComponent('tilemap-instanced', {
     tileWidth: { type: 'number', default: 1 },
     tileHeight: { type: 'number', default: 1 },
     origin: { type: 'vec2', default: { x: 0.5, y: 0.5 } },
-    debug: { type: 'boolean', default: true },
+    debug: { type: 'boolean', default: false },
   },
 
   init() {
@@ -215,7 +215,7 @@ AFRAME.registerComponent('tilemap-instanced', {
         const r = data[index++];
         const g = data[index++];
         const b = data[index++];
-        const a = data[index++];
+        index++; // Skip array access on 'a', it is unused.
 
         // Compute the tileId and rotation associated with this tile.
         const tileId = 256 * r + g;

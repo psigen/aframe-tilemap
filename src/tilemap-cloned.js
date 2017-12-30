@@ -10,7 +10,7 @@ AFRAME.registerComponent('tilemap-cloned', {
     tileWidth: { type: 'number', default: 1 },
     tileHeight: { type: 'number', default: 1 },
     origin: { type: 'vec2', default: { x: 0.5, y: 0.5 } },
-    debug: { type: 'boolean', default: true },
+    debug: { type: 'boolean', default: false },
   },
 
   init: function() {
