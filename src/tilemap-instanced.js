@@ -45,8 +45,9 @@ AFRAME.registerComponent('tilemap-instanced', {
       if (tile) {
         tiles[tile.data.id] = {
           entity: tile,
-          meshes: {},
-          instances: { offsets: [] },
+          references: {},
+          instances: {},
+          offsets: [],
         };
       }
     }
@@ -55,8 +56,8 @@ AFRAME.registerComponent('tilemap-instanced', {
     // Construct tilemap after a number of pre-processing steps.
     this.constructTiles()
       .then(() => {
-        this.constructInstances();
         this.constructMeshes();
+        this.constructInstances();
       })
       .then(() => {
         this.el.emit('model-loaded');
@@ -70,61 +71,61 @@ AFRAME.registerComponent('tilemap-instanced', {
 
     for (const tileId in tiles) {
       const tile = tiles[tileId];
-      const instances = tile.instances;
-      if (instances.offsets.length <= 0) continue;
+      const { offsets, instances, references } = tile;
 
-      // Create instance attributes for all meshes in this tile.
-      const offsetAttribute = new THREE.InstancedBufferAttribute(
-        new Float32Array(instances.offsets),
-        3,
-      );
+      // Iterate over each reference mesh in this tile.
+      for (const uuid in references) {
+        const reference = references[uuid];
+        const referenceGeometry = reference.geometry;
+        const referenceMaterial = reference.mesh.material;
 
-      // Iterate over each mesh in this tile.
-      for (const uuid in tile.meshes) {
-        const mesh = tile.meshes[uuid];
-        const meshGeometry = mesh.geometry;
-        const meshMaterial = mesh.mesh.material;
-
-        const shader = SHADERLIB_MATERIALS[meshMaterial.type];
+        const shader = SHADERLIB_MATERIALS[referenceMaterial.type];
         const uniforms = THREE.UniformsUtils.clone(shader.uniforms);
-        updateUniforms(uniforms, meshMaterial);
+        updateUniforms(uniforms, referenceMaterial);
 
         const instanceMaterial = new THREE.ShaderMaterial({
           uniforms,
           //vertexShader: shader.vertexShader, // document.getElementById('vertexShader').textContent,
           vertexShader: INSTANCED_VERTEX_SHADER,
           fragmentShader: shader.fragmentShader,
-          lights: meshMaterial.lights,
+          lights: referenceMaterial.lights,
           defines: {
-            USE_MAP: !!meshMaterial.map,
-            USE_ENVMAP: !!meshMaterial.envMap,
-            USE_AOMAP: !!meshMaterial.aoMap,
-            USE_EMISSIVEMAP: !!meshMaterial.emissiveMap,
-            USE_BUMPMAP: !!meshMaterial.bumpMap,
-            USE_NORMALMAP: !!meshMaterial.normalMap,
-            USE_SPECULARMAP: !!meshMaterial.specularMap,
-            USE_ROUGHNESSMAP: !!meshMaterial.roughnessMap,
-            USE_METALNESSMAP: !!meshMaterial.metalnessMap,
-            USE_ALPHAMAP: !!meshMaterial.alphaMap,
-            USE_COLOR: !!meshMaterial.vertexColors,
-            FLAT_SHADED: !!meshMaterial.flatShading,
-            DOUBLE_SIDED: !!meshMaterial.doubleSided,
-            FLIP_SIDED: !meshMaterial.flipSided,
+            USE_MAP: !!referenceMaterial.map,
+            USE_ENVMAP: !!referenceMaterial.envMap,
+            USE_AOMAP: !!referenceMaterial.aoMap,
+            USE_EMISSIVEMAP: !!referenceMaterial.emissiveMap,
+            USE_BUMPMAP: !!referenceMaterial.bumpMap,
+            USE_NORMALMAP: !!referenceMaterial.normalMap,
+            USE_SPECULARMAP: !!referenceMaterial.specularMap,
+            USE_ROUGHNESSMAP: !!referenceMaterial.roughnessMap,
+            USE_METALNESSMAP: !!referenceMaterial.metalnessMap,
+            USE_ALPHAMAP: !!referenceMaterial.alphaMap,
+            USE_COLOR: !!referenceMaterial.vertexColors,
+            FLAT_SHADED: !!referenceMaterial.flatShading,
+            DOUBLE_SIDED: !!referenceMaterial.doubleSided,
+            FLIP_SIDED: !!referenceMaterial.flipSided,
           },
         });
 
         const instanceGeometry = new THREE.InstancedBufferGeometry();
-        instanceGeometry.index = meshGeometry.index;
-        for (const attribute in meshGeometry.attributes) {
+        instanceGeometry.index = referenceGeometry.index;
+        for (const attribute in referenceGeometry.attributes) {
           instanceGeometry.addAttribute(
             attribute,
-            meshGeometry.getAttribute(attribute),
+            referenceGeometry.getAttribute(attribute),
           );
         }
+
+        // Create instance attributes for all meshes in this tile.
+        const offsetAttribute = new THREE.InstancedBufferAttribute(
+          new Float32Array(instances.offsets),
+          3,
+        );
         instanceGeometry.addAttribute('tilemapOffset', offsetAttribute);
 
-        const instance = new THREE.Mesh(instanceGeometry, instanceMaterial);
-        this.el.object3D.add(instance);
+        const instanceMesh = new THREE.Mesh(instanceGeometry, instanceMaterial);
+        this.el.object3D.add(instanceMesh);
+        instances[uuid] = { mesh: instanceMesh, geometry: instanceGeometry };
       }
     }
 
@@ -157,6 +158,12 @@ AFRAME.registerComponent('tilemap-instanced', {
     context.drawImage(img, 0, 0);
     const data = context.getImageData(0, 0, imgWidth, imgHeight).data;
 
+    // Clear all existing offsets from tiles.
+    for (const tileId in tiles) {
+      tiles[tileId].offsets = [];
+    }
+
+    // Iterate through canvas and update the offsets of each tile.
     let index = 0;
     for (let row = 0; row < imgHeight; ++row) {
       for (let col = 0; col < imgWidth; ++col) {
@@ -170,14 +177,30 @@ AFRAME.registerComponent('tilemap-instanced', {
         // Retrieve the appropriate tile geometry and merge it into place.
         if (tileId in tiles) {
           // Determine instance and tile position.
-          const instances = tiles[tileId].instances;
           const x = tileWidth * col + tileOffsetX;
           const y = tileHeight * row + tileOffsetY;
           const theta = M_TAU_SCALED * b;
 
           // Add this instance's position to the instanced attributes.
-          instances.offsets.push(x, y, theta);
+          tiles[tileId].offsets.push(x, y, theta);
         }
+      }
+    }
+
+    // Set the new instance locations for each tile.
+    for (const tileId in tiles) {
+      const { offsets, instances } = tiles[tileId];
+
+      // Create instance attributes for all meshes in this tile.
+      const offsetAttribute = new THREE.InstancedBufferAttribute(
+        new Float32Array(offsets),
+        3,
+      );
+
+      // Set this buffer attribute on each mesh.
+      for (const uuid in instances) {
+        const instanceGeometry = instances[uuid].geometry;
+        instanceGeometry.attributes['tilemapOffset'] = offsetAttribute;
       }
     }
 
@@ -199,11 +222,10 @@ AFRAME.registerComponent('tilemap-instanced', {
     );
 
     for (const tileId in tiles) {
-      const tile = tiles[tileId];
-      const meshes = tile.meshes;
+      const { entity, references } = tiles[tileId];
 
-      const tileLoadingPromise = waitUntilLoaded(tile.entity).then(() => {
-        tile.entity.el.object3D.traverse(mesh => {
+      const tileLoadingPromise = waitUntilLoaded(entity).then(() => {
+        entity.el.object3D.traverse(mesh => {
           if (mesh.type !== 'Mesh') return;
 
           const geometry =
@@ -217,7 +239,7 @@ AFRAME.registerComponent('tilemap-instanced', {
             .multiply(mesh.matrixWorld);
           geometry.applyMatrix(matrix);
 
-          meshes[mesh.uuid] = { mesh, geometry };
+          references[mesh.uuid] = { mesh, geometry };
         });
       });
 
@@ -231,6 +253,10 @@ AFRAME.registerComponent('tilemap-instanced', {
     }
 
     return Promise.all(tileLoadingPromises);
+  },
+
+  tick() {
+    this.constructInstances();
   },
 
   update(oldData) {
