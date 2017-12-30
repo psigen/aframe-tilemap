@@ -12,6 +12,7 @@
     <a-scene stats>
       <a-assets>
         <a-asset-item id="milkTruck" src="assets/CesiumMilkTruck.glb"></a-asset-item>
+        <img id="tilemap-256" src="maps/tilemap-256px.png">
         <img id="tilemap-128" src="maps/tilemap-128px.png">
         <img id="tilemap-64"  src="maps/tilemap-064px.png">
         <img id="tilemap-32"  src="maps/tilemap-032px.png">
@@ -21,7 +22,7 @@
       <a-entity light="type: directional; color: #FFF; intensity: 0.6" position="-0.5 1 1"></a-entity>
       <a-sky color="#333"></a-sky>
 
-      <a-entity tilemap-instanced="src: #tilemap-128" position="0 0 -20">
+      <a-entity tilemap-instanced="src: #tilemap-256" position="0 0 -20">
         <a-entity tile="id: 1" geometry="primitive: box" visible="false" scale="0.5 0.5 2"></a-entity>
         <a-entity tile="id: 2; readyEvent: model-loaded" gltf-model="#milkTruck" visible="false" scale="0.25 0.25 0.25"></a-entity>
         <a-entity tile="id: 3" geometry="primitive: sphere" visible="false" scale="0.25 0.25 0.25"></a-entity>
