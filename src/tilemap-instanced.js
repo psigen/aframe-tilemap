@@ -212,8 +212,10 @@ AFRAME.registerComponent('tilemap-instanced', {
     for (let row = 0; row < height; ++row) {
       for (let col = 0; col < width; ++col) {
         // Extract the pixel components used for the tile rasterization.
-        const [r, g, b, a] = data.slice(index, index + 4);
-        index += 4;
+        const r = data[index++];
+        const g = data[index++];
+        const b = data[index++];
+        const a = data[index++];
 
         // Compute the tileId and rotation associated with this tile.
         const tileId = 256 * r + g;
