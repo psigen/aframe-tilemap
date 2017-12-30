@@ -55,11 +55,25 @@ AFRAME.registerComponent('tilemap-instanced', {
     for (const child of el.children) {
       const tile = child.components.tile;
       if (tile) {
+        // Create a single buffer attribute for this tile.
+        const buffer = new Float32Array(width * height).fill(Infinity);
+        const attribute = new THREE.InstancedBufferAttribute(
+          buffer,
+          3,
+          1,
+          true,
+        );
+
+        // Create a placeholder tile structure that will be populated.
         tiles[tile.data.id] = {
           entity: tile,
           references: {},
           instances: {},
-          offsets: [],
+          offsets: {
+            attribute,
+            buffer,
+            count: 0,
+          },
         };
       }
     }
@@ -70,20 +84,25 @@ AFRAME.registerComponent('tilemap-instanced', {
       event => {
         const img = this.data.src;
         const context = this.context;
-        context.drawImage(img, event.which, event.which);
 
         var keyCode = event.which;
         if (keyCode == 87) {
           // up
+          context.drawImage(img, 1, 2);
         } else if (keyCode == 83) {
           // down
+          context.drawImage(img, 1, 0);
         } else if (keyCode == 65) {
           // left
+          context.drawImage(img, 0, 1);
         } else if (keyCode == 68) {
           // right
+          context.drawImage(img, 2, 1);
         } else if (keyCode == 32) {
           // space
+          context.drawImage(img, 1, 1);
         }
+        this.constructInstances();
       },
       false,
     );
@@ -104,10 +123,11 @@ AFRAME.registerComponent('tilemap-instanced', {
   constructMeshes() {
     const t0 = performance.now();
     const tiles = this.tiles;
+    const { width, height } = this.canvas;
 
     for (const tileId in tiles) {
       const tile = tiles[tileId];
-      const { offsets, instances, references } = tile;
+      const { instances, references, offsets } = tile;
 
       // Iterate over each reference mesh in this tile.
       for (const uuid in references) {
@@ -121,7 +141,6 @@ AFRAME.registerComponent('tilemap-instanced', {
 
         const instanceMaterial = new THREE.ShaderMaterial({
           uniforms,
-          //vertexShader: shader.vertexShader, // document.getElementById('vertexShader').textContent,
           vertexShader: INSTANCED_VERTEX_SHADER,
           fragmentShader: shader.fragmentShader,
           lights: referenceMaterial.lights,
@@ -144,6 +163,7 @@ AFRAME.registerComponent('tilemap-instanced', {
         });
 
         const instanceGeometry = new THREE.InstancedBufferGeometry();
+        instanceGeometry.addAttribute('tilemapOffset', offsets.attribute);
         instanceGeometry.index = referenceGeometry.index;
         for (const attribute in referenceGeometry.attributes) {
           instanceGeometry.addAttribute(
@@ -151,13 +171,6 @@ AFRAME.registerComponent('tilemap-instanced', {
             referenceGeometry.getAttribute(attribute),
           );
         }
-
-        // Create instance attributes for all meshes in this tile.
-        const offsetAttribute = new THREE.InstancedBufferAttribute(
-          new Float32Array(instances.offsets),
-          3,
-        );
-        instanceGeometry.addAttribute('tilemapOffset', offsetAttribute);
 
         const instanceMesh = new THREE.Mesh(instanceGeometry, instanceMaterial);
         this.el.object3D.add(instanceMesh);
@@ -182,12 +195,16 @@ AFRAME.registerComponent('tilemap-instanced', {
     const { width, height } = canvas;
     const { tileWidth, tileHeight } = this.data;
 
+    // Get tilemap pixel data from canvas.
     const context = this.canvas.getContext('2d');
     const data = context.getImageData(0, 0, width, height).data;
 
-    // Clear all existing offsets from tiles.
+    // Clear the existing instances of the tile.
     for (const tileId in tiles) {
-      tiles[tileId].offsets = [];
+      const { offsets } = tiles[tileId];
+      offsets.buffer.fill(Infinity, 0, offsets.count);
+      offsets.attribute.needsUpdate = true;
+      offsets.count = 0;
     }
 
     // Iterate through canvas and update the offsets of each tile.
@@ -203,31 +220,20 @@ AFRAME.registerComponent('tilemap-instanced', {
 
         // Retrieve the appropriate tile geometry and merge it into place.
         if (tileId in tiles) {
+          const { offsets } = tiles[tileId];
+          const { buffer, count } = offsets;
+
           // Determine instance and tile position.
           const x = tileWidth * col + tileOffsetX;
           const y = tileHeight * row + tileOffsetY;
           const theta = M_TAU_SCALED * b;
 
           // Add this instance's position to the instanced attributes.
-          tiles[tileId].offsets.push(x, y, theta);
+          buffer[3 * count + 0] = x;
+          buffer[3 * count + 1] = y;
+          buffer[3 * count + 2] = theta;
+          offsets.count++;
         }
-      }
-    }
-
-    // Set the new instance locations for each tile.
-    for (const tileId in tiles) {
-      const { offsets, instances } = tiles[tileId];
-
-      // Create instance attributes for all meshes in this tile.
-      const offsetAttribute = new THREE.InstancedBufferAttribute(
-        new Float32Array(offsets),
-        3,
-      );
-
-      // Set this buffer attribute on each mesh.
-      for (const uuid in instances) {
-        const instanceGeometry = instances[uuid].geometry;
-        instanceGeometry.attributes['tilemapOffset'] = offsetAttribute;
       }
     }
 
