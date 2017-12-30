@@ -26,6 +26,28 @@ void main() {
 }
 `;
 
+function randomizeCanvas(canvas) {
+  const x = 0;
+  const y = 0;
+  const width = canvas.width;
+  const height = canvas.height;
+  const g = canvas.getContext('2d');
+  const imageData = g.getImageData(x, y, width, height);
+  const pixels = imageData.data;
+  const n = pixels.length;
+  const random = Math.random;
+
+  for (let i = 0; i < n; ) {
+    pixels[i] = pixels[i++];
+    pixels[i++] = (Math.random() * 4) | 0;
+    pixels[i++] = (Math.random() * 255) | 0;
+    pixels[i] = pixels[i++];
+  }
+  g.putImageData(imageData, x, y);
+
+  return canvas;
+}
+
 AFRAME.registerComponent('tilemap-instanced', {
   schema: {
     src: { type: 'asset' },
@@ -56,7 +78,7 @@ AFRAME.registerComponent('tilemap-instanced', {
       const tile = child.components.tile;
       if (tile) {
         // Create a single buffer attribute for this tile.
-        const buffer = new Float32Array(width * height).fill(Infinity);
+        const buffer = new Float32Array(width * height * 3).fill(Infinity);
         const attribute = new THREE.InstancedBufferAttribute(
           buffer,
           3,
@@ -82,25 +104,10 @@ AFRAME.registerComponent('tilemap-instanced', {
     document.addEventListener(
       'keydown',
       event => {
-        const img = this.data.src;
-        const context = this.context;
-
         var keyCode = event.which;
-        if (keyCode == 87) {
-          // up
-          context.drawImage(img, 1, 2);
-        } else if (keyCode == 83) {
-          // down
-          context.drawImage(img, 1, 0);
-        } else if (keyCode == 65) {
-          // left
-          context.drawImage(img, 0, 1);
-        } else if (keyCode == 68) {
-          // right
-          context.drawImage(img, 2, 1);
-        } else if (keyCode == 32) {
+        if (keyCode == 32) {
           // space
-          context.drawImage(img, 1, 1);
+          randomizeCanvas(this.canvas);
         }
         this.constructInstances();
       },
@@ -227,7 +234,7 @@ AFRAME.registerComponent('tilemap-instanced', {
 
           // Determine instance and tile position.
           const x = tileWidth * col + tileOffsetX;
-          const y = tileHeight * row + tileOffsetY;
+          const y = -tileHeight * row - tileOffsetY;
           const theta = M_TAU_SCALED * b;
 
           // Add this instance's position to the instanced attributes.

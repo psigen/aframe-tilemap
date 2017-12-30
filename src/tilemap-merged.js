@@ -105,7 +105,7 @@ AFRAME.registerComponent('tilemap-merged', {
         // Retrieve the appropriate tile geometry and merge it into place.
         if (tileId in tiles) {
           const x = tileWidth * col + tileOffsetX;
-          const y = tileHeight * row + tileOffsetY;
+          const y = -tileHeight * row - tileOffsetY;
           this.addTileGeometry(tileId, x, y, rotation, invRootMatrixWorld);
         }
       }

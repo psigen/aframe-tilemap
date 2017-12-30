@@ -70,7 +70,7 @@ AFRAME.registerComponent('tilemap-cloned', {
           const instanceO3D = tileO3D.clone();
 
           instanceO3D.translateX(tileWidth * col + tileOffsetX);
-          instanceO3D.translateY(tileHeight * row + tileOffsetY);
+          instanceO3D.translateY(-tileHeight * row - tileOffsetY);
           instanceO3D.rotateZ(rotation);
           instanceO3D.visible = true;
 
