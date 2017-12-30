@@ -239,6 +239,18 @@ AFRAME.registerComponent('tilemap-instanced', {
       }
     }
 
+    // Update the number of instances that are actually being rendered.
+    for (const tileId in tiles) {
+      const { offsets, instances } = tiles[tileId];
+      const { count } = offsets;
+
+      // TODO: disable mesh visibility on all unused tiles.
+      for (const uuid in instances) {
+        const instance = instances[uuid];
+        instance.geometry.maxInstancedCount = count;
+      }
+    }
+
     // If the debug flag is set, print timing metrics.
     if (this.data.debug) {
       const t1 = performance.now();
