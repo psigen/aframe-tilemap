@@ -38,6 +38,18 @@ AFRAME.registerComponent('tilemap-instanced', {
   init() {
     const el = this.el;
     const tiles = (this.tiles = {});
+    const canvas = (this.canvas = document.createElement('canvas'));
+    const context = (this.context = canvas.getContext('2d'));
+
+    // Draw original tilemap as background.
+    const img = this.data.src;
+    const width = (canvas.width = img.naturalWidth);
+    const height = (canvas.height = img.naturalHeight);
+    context.drawImage(img, 0, 0);
+
+    // Compute tilemap offset constants.
+    this.tileOffsetX = -this.data.tileWidth * width * this.data.origin.x;
+    this.tileOffsetY = -this.data.tileHeight * height * this.data.origin.y;
 
     // Record all current tile children of this component.
     for (const child of el.children) {
@@ -51,6 +63,30 @@ AFRAME.registerComponent('tilemap-instanced', {
         };
       }
     }
+
+    // TODO: remove this.
+    document.addEventListener(
+      'keydown',
+      event => {
+        const img = this.data.src;
+        const context = this.context;
+        context.drawImage(img, event.which, event.which);
+
+        var keyCode = event.which;
+        if (keyCode == 87) {
+          // up
+        } else if (keyCode == 83) {
+          // down
+        } else if (keyCode == 65) {
+          // left
+        } else if (keyCode == 68) {
+          // right
+        } else if (keyCode == 32) {
+          // space
+        }
+      },
+      false,
+    );
 
     // TODO: add event handler for new children.
     // Construct tilemap after a number of pre-processing steps.
@@ -142,21 +178,12 @@ AFRAME.registerComponent('tilemap-instanced', {
   // 4. Add that tile at the corresponding position and rotation.
   constructInstances() {
     const t0 = performance.now();
-    const tiles = this.tiles;
+    const { canvas, tiles, tileOffsetX, tileOffsetY } = this;
+    const { width, height } = canvas;
+    const { tileWidth, tileHeight } = this.data;
 
-    const img = this.data.src;
-    const imgWidth = img.naturalWidth;
-    const imgHeight = img.naturalHeight;
-
-    const tileWidth = this.data.tileWidth;
-    const tileHeight = this.data.tileHeight;
-    const tileOffsetX = -tileWidth * imgWidth * this.data.origin.x;
-    const tileOffsetY = -tileHeight * imgHeight * this.data.origin.y;
-
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    context.drawImage(img, 0, 0);
-    const data = context.getImageData(0, 0, imgWidth, imgHeight).data;
+    const context = this.canvas.getContext('2d');
+    const data = context.getImageData(0, 0, width, height).data;
 
     // Clear all existing offsets from tiles.
     for (const tileId in tiles) {
@@ -165,8 +192,8 @@ AFRAME.registerComponent('tilemap-instanced', {
 
     // Iterate through canvas and update the offsets of each tile.
     let index = 0;
-    for (let row = 0; row < imgHeight; ++row) {
-      for (let col = 0; col < imgWidth; ++col) {
+    for (let row = 0; row < height; ++row) {
+      for (let col = 0; col < width; ++col) {
         // Extract the pixel components used for the tile rasterization.
         const [r, g, b, a] = data.slice(index, index + 4);
         index += 4;
@@ -256,6 +283,7 @@ AFRAME.registerComponent('tilemap-instanced', {
   },
 
   tick() {
+    // TODO: remove this?
     this.constructInstances();
   },
 
