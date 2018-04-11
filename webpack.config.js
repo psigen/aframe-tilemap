@@ -33,11 +33,13 @@ module.exports = {
   externals: {
     aframe: {
       commonjs: 'aframe',
+      commonjs2: 'aframe',
       amd: 'aframe',
       root: 'AFRAME', // global variable
     },
     three: {
       commonjs: 'three',
+      commonjs2: 'three',
       amd: 'three',
       root: 'THREE', // global variable
     },

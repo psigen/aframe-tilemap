@@ -1,10 +1,10 @@
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory(require("THREE"), require("AFRAME"));
+		module.exports = factory(require("three"), require("aframe"));
 	else if(typeof define === 'function' && define.amd)
-		define("aframeTilemap", ["THREE", "AFRAME"], factory);
+		define("aframeTilemap", ["three", "aframe"], factory);
 	else if(typeof exports === 'object')
-		exports["aframeTilemap"] = factory(require("THREE"), require("AFRAME"));
+		exports["aframeTilemap"] = factory(require("three"), require("aframe"));
 	else
 		root["aframeTilemap"] = factory(root["THREE"], root["AFRAME"]);
 })(typeof self !== 'undefined' ? self : this, function(__WEBPACK_EXTERNAL_MODULE_0__, __WEBPACK_EXTERNAL_MODULE_1__) {
