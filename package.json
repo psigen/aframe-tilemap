@@ -30,7 +30,8 @@
   },
   "homepage": "https://github.com/psigen/aframe-tilemap",
   "peerDependencies": {
-    "aframe": ">=0.5.0"
+    "aframe": ">=0.5.0",
+    "three": ">=0.90.0"
   },
   "devDependencies": {
     "babel-core": "^6.26.0",

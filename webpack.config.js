@@ -31,7 +31,15 @@ module.exports = {
     ],
   },
   externals: {
-    three: 'THREE',
-    aframe: 'AFRAME',
+    aframe: {
+      commonjs: 'aframe',
+      amd: 'aframe',
+      root: 'AFRAME', // global variable
+    },
+    three: {
+      commonjs: 'three',
+      amd: 'three',
+      root: 'THREE', // global variable
+    },
   },
 };
