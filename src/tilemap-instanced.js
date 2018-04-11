@@ -207,7 +207,7 @@ AFRAME.registerComponent('tilemap-instanced', {
           if (mesh.type !== 'Mesh') return;
 
           const geometry =
-            mesh.geometry instanceof THREE.BufferGeometry
+            mesh.geometry.type === 'BufferGeometry'
               ? new THREE.BufferGeometry().copy(mesh.geometry)
               : new THREE.BufferGeometry().fromGeometry(mesh.geometry);
 
