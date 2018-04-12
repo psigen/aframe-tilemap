@@ -77,7 +77,7 @@ AFRAME.registerComponent('tilemap-merged', {
     const imgHeight = img.naturalHeight;
 
     const tileWidth = this.data.tileWidth;
-    const tileHeight = this.data.tileHeight;
+    const tileHeight = -this.data.tileHeight;
     const tileOffsetX = -tileWidth * imgWidth * this.data.origin.x;
     const tileOffsetY = -tileHeight * imgHeight * this.data.origin.y;
 
