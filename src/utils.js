@@ -19,3 +19,7 @@ export function waitUntilLoaded(entity) {
     });
   });
 }
+
+export function isBufferGeometry(geometry) {
+  return geometry.type === 'BufferGeometry';
+}

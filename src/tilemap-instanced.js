@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import AFRAME from 'aframe';
 
 import { updateUniforms } from './conversions';
-import { waitUntilLoaded } from './utils';
+import { isBufferGeometry, waitUntilLoaded } from './utils';
 import {
   SHADERLIB_MATERIALS,
   SHADERLIB_DEFAULT_MATERIAL,
@@ -212,10 +212,9 @@ AFRAME.registerComponent('tilemap-instanced', {
         tile.entity.el.object3D.traverse(mesh => {
           if (mesh.type !== 'Mesh') return;
 
-          const geometry =
-            mesh.geometry.type === 'BufferGeometry'
-              ? new THREE.BufferGeometry().copy(mesh.geometry)
-              : new THREE.BufferGeometry().fromGeometry(mesh.geometry);
+          const geometry = isBufferGeometry(mesh.geometry)
+            ? new THREE.BufferGeometry().copy(mesh.geometry)
+            : new THREE.BufferGeometry().fromGeometry(mesh.geometry);
 
           mesh.updateMatrixWorld();
           const matrix = new THREE.Matrix4()

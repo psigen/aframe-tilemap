@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import AFRAME from 'aframe';
 
-import { waitUntilLoaded } from './utils';
+import { isBufferGeometry, waitUntilLoaded } from './utils';
 import { M_TAU_SCALED } from './constants';
 
 AFRAME.registerComponent('tilemap-merged', {
@@ -130,10 +130,9 @@ AFRAME.registerComponent('tilemap-merged', {
       matrix.multiply(invRootMatrixWorld);
       matrix.multiply(mesh.matrixWorld);
 
-      let geometry = mesh.geometry;
-      if (geometry instanceof THREE.BufferGeometry) {
-        geometry = new THREE.Geometry().fromBufferGeometry(mesh.geometry);
-      }
+      const geometry = isBufferGeometry(geometry)
+        ? new THREE.Geometry().fromBufferGeometry(geometry)
+        : mesh.geometry;
       mergedGeometry.merge(geometry, matrix);
     }
   },
