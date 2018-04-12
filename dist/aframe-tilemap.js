@@ -530,7 +530,7 @@ _aframe2.default.registerComponent('tilemap-instanced', {
         tile.entity.el.object3D.traverse(function (mesh) {
           if (mesh.type !== 'Mesh') return;
 
-          var geometry = mesh.geometry instanceof THREE.BufferGeometry ? new THREE.BufferGeometry().copy(mesh.geometry) : new THREE.BufferGeometry().fromGeometry(mesh.geometry);
+          var geometry = mesh.geometry.type === 'BufferGeometry' ? new THREE.BufferGeometry().copy(mesh.geometry) : new THREE.BufferGeometry().fromGeometry(mesh.geometry);
 
           mesh.updateMatrixWorld();
           var matrix = new THREE.Matrix4().copy(invMatrixWorld).multiply(mesh.matrixWorld);
