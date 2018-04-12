@@ -138,6 +138,7 @@ var SHADERLIB_MATERIALS = exports.SHADERLIB_MATERIALS = {
 };
 var M_TAU_SCALED = exports.M_TAU_SCALED = 2.0 * Math.PI / 256.0;
 var Z_AXIS = exports.Z_AXIS = new THREE.Vector3(0, 0, 1);
+var SHADERLIB_DEFAULT_MATERIAL = exports.SHADERLIB_DEFAULT_MATERIAL = SHADERLIB_MATERIALS['MeshStandardMaterial'];
 
 /***/ }),
 /* 4 */
@@ -250,7 +251,7 @@ _aframe2.default.registerComponent('tilemap-cloned', {
     var imgHeight = img.naturalHeight;
 
     var tileWidth = this.data.tileWidth;
-    var tileHeight = this.data.tileHeight;
+    var tileHeight = -this.data.tileHeight;
     var tileOffsetX = -tileWidth * imgWidth * this.data.origin.x;
     var tileOffsetY = -tileHeight * imgHeight * this.data.origin.y;
 
@@ -408,7 +409,7 @@ _aframe2.default.registerComponent('tilemap-instanced', {
         var meshGeometry = mesh.geometry;
         var meshMaterial = mesh.mesh.material;
 
-        var shader = _constants.SHADERLIB_MATERIALS[meshMaterial.type];
+        var shader = _constants.SHADERLIB_MATERIALS[meshMaterial.type] || _constants.SHADERLIB_DEFAULT_MATERIAL;
         var uniforms = THREE.UniformsUtils.clone(shader.uniforms);
         (0, _conversions.updateUniforms)(uniforms, meshMaterial);
 
@@ -469,7 +470,7 @@ _aframe2.default.registerComponent('tilemap-instanced', {
     var imgHeight = img.naturalHeight;
 
     var tileWidth = this.data.tileWidth;
-    var tileHeight = this.data.tileHeight;
+    var tileHeight = -this.data.tileHeight;
     var tileOffsetX = -tileWidth * imgWidth * this.data.origin.x;
     var tileOffsetY = -tileHeight * imgHeight * this.data.origin.y;
 
@@ -1016,7 +1017,7 @@ _aframe2.default.registerComponent('tilemap-merged', {
     var imgHeight = img.naturalHeight;
 
     var tileWidth = this.data.tileWidth;
-    var tileHeight = this.data.tileHeight;
+    var tileHeight = -this.data.tileHeight;
     var tileOffsetX = -tileWidth * imgWidth * this.data.origin.x;
     var tileOffsetY = -tileHeight * imgHeight * this.data.origin.y;
 
