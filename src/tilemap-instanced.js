@@ -3,7 +3,12 @@ import AFRAME from 'aframe';
 
 import { updateUniforms } from './conversions';
 import { waitUntilLoaded } from './utils';
-import { SHADERLIB_MATERIALS, M_TAU_SCALED, Z_AXIS } from './constants';
+import {
+  SHADERLIB_MATERIALS,
+  SHADERLIB_DEFAULT_MATERIAL,
+  M_TAU_SCALED,
+  Z_AXIS,
+} from './constants';
 
 const INSTANCED_VERTEX_SHADER = `
 precision highp float;
@@ -85,7 +90,8 @@ AFRAME.registerComponent('tilemap-instanced', {
         const meshGeometry = mesh.geometry;
         const meshMaterial = mesh.mesh.material;
 
-        const shader = SHADERLIB_MATERIALS[meshMaterial.type];
+        const shader =
+          SHADERLIB_MATERIALS[meshMaterial.type] || SHADERLIB_DEFAULT_MATERIAL;
         const uniforms = THREE.UniformsUtils.clone(shader.uniforms);
         updateUniforms(uniforms, meshMaterial);
 
