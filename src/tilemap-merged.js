@@ -130,8 +130,8 @@ AFRAME.registerComponent('tilemap-merged', {
       matrix.multiply(invRootMatrixWorld);
       matrix.multiply(mesh.matrixWorld);
 
-      const geometry = isBufferGeometry(geometry)
-        ? new THREE.Geometry().fromBufferGeometry(geometry)
+      const geometry = isBufferGeometry(mesh.geometry)
+        ? new THREE.Geometry().fromBufferGeometry(mesh.geometry)
         : mesh.geometry;
       mergedGeometry.merge(geometry, matrix);
     }

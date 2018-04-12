@@ -1081,7 +1081,7 @@ _aframe2.default.registerComponent('tilemap-merged', {
       matrix.multiply(invRootMatrixWorld);
       matrix.multiply(mesh.matrixWorld);
 
-      var geometry = (0, _utils.isBufferGeometry)(geometry) ? new THREE.Geometry().fromBufferGeometry(geometry) : mesh.geometry;
+      var geometry = (0, _utils.isBufferGeometry)(mesh.geometry) ? new THREE.Geometry().fromBufferGeometry(mesh.geometry) : mesh.geometry;
       mergedGeometry.merge(geometry, matrix);
     }
   },
