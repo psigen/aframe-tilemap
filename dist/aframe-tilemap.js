@@ -96,6 +96,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.waitUntilLoaded = waitUntilLoaded;
+exports.isBufferGeometry = isBufferGeometry;
 var timeout = function timeout(ms) {
   return new Promise(function (res) {
     return setTimeout(res, ms);
@@ -120,6 +121,10 @@ function waitUntilLoaded(entity) {
       }, 100);
     });
   });
+}
+
+function isBufferGeometry(geometry) {
+  return geometry.type === 'BufferGeometry';
 }
 
 /***/ }),
@@ -531,7 +536,7 @@ _aframe2.default.registerComponent('tilemap-instanced', {
         tile.entity.el.object3D.traverse(function (mesh) {
           if (mesh.type !== 'Mesh') return;
 
-          var geometry = mesh.geometry.type === 'BufferGeometry' ? new THREE.BufferGeometry().copy(mesh.geometry) : new THREE.BufferGeometry().fromGeometry(mesh.geometry);
+          var geometry = (0, _utils.isBufferGeometry)(mesh.geometry) ? new THREE.BufferGeometry().copy(mesh.geometry) : new THREE.BufferGeometry().fromGeometry(mesh.geometry);
 
           mesh.updateMatrixWorld();
           var matrix = new THREE.Matrix4().copy(invMatrixWorld).multiply(mesh.matrixWorld);
@@ -1076,10 +1081,7 @@ _aframe2.default.registerComponent('tilemap-merged', {
       matrix.multiply(invRootMatrixWorld);
       matrix.multiply(mesh.matrixWorld);
 
-      var geometry = mesh.geometry;
-      if (geometry instanceof THREE.BufferGeometry) {
-        geometry = new THREE.Geometry().fromBufferGeometry(mesh.geometry);
-      }
+      var geometry = (0, _utils.isBufferGeometry)(geometry) ? new THREE.Geometry().fromBufferGeometry(geometry) : mesh.geometry;
       mergedGeometry.merge(geometry, matrix);
     }
   },
